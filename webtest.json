@@ -1,0 +1,690 @@
+[
+    {
+  "fixture": "haControlLight",
+  "options": {
+    "algorithm": "mrtree",
+    "postLayoutAdjust": {
+      "enabled": true,
+      "upperOffset": -80,
+      "lowerOffset": 80
+    },
+    "elkPartitioning": false,
+    "twoPassYSort": true
+  },
+  "direction": "vertical",
+  "nodes": [
+    {
+      "id": "trigger-001",
+      "kind": "trigger",
+      "partition": 0,
+      "x": 160,
+      "y": 20
+    },
+    {
+      "id": "log-request-001",
+      "kind": "action",
+      "partition": 0,
+      "x": 140,
+      "y": 115
+    },
+    {
+      "id": "try-main-001",
+      "kind": "try",
+      "partition": 0,
+      "x": 215,
+      "y": 221
+    },
+    {
+      "id": "call-service-001",
+      "kind": "action",
+      "partition": 1,
+      "x": -60,
+      "y": 288
+    },
+    {
+      "id": "get-state-001",
+      "kind": "action",
+      "partition": 1,
+      "x": -60,
+      "y": 393
+    },
+    {
+      "id": "return-success-001",
+      "kind": "action",
+      "partition": 1,
+      "x": -60,
+      "y": 498
+    },
+    {
+      "id": "catch-error-001",
+      "kind": "catch",
+      "partition": 0,
+      "x": 330,
+      "y": 307
+    },
+    {
+      "id": "log-error-001",
+      "kind": "action",
+      "partition": 2,
+      "x": 340,
+      "y": 393
+    },
+    {
+      "id": "check-not-found",
+      "kind": "if",
+      "partition": 0,
+      "x": 335,
+      "y": 517
+    },
+    {
+      "id": "check-not-found::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 15,
+      "y": 607
+    },
+    {
+      "id": "return-404-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 98,
+      "y": 671
+    },
+    {
+      "id": "check-not-found::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 501,
+      "y": 607
+    },
+    {
+      "id": "check-unauthorized",
+      "kind": "if",
+      "partition": 0,
+      "x": 418,
+      "y": 690
+    },
+    {
+      "id": "check-unauthorized::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 258,
+      "y": 777
+    },
+    {
+      "id": "return-401-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 180,
+      "y": 838
+    },
+    {
+      "id": "check-unauthorized::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 583,
+      "y": 777
+    },
+    {
+      "id": "check-403",
+      "kind": "if",
+      "partition": 0,
+      "x": 500,
+      "y": 857
+    },
+    {
+      "id": "check-403::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 303,
+      "y": 944
+    },
+    {
+      "id": "return-403-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 225,
+      "y": 1005
+    },
+    {
+      "id": "check-403::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 703,
+      "y": 944
+    },
+    {
+      "id": "return-500-001",
+      "kind": "action",
+      "partition": 2,
+      "x": 625,
+      "y": 1005
+    },
+    {
+      "id": "::end",
+      "kind": "end",
+      "partition": 0,
+      "x": 300,
+      "y": 1170
+    }
+  ],
+  "feedback": "I think this is largely working--we just need to figure out how to eliminate the odd edge wobble between node 3/4, 2/3 if possible",
+  "exportedAt": "2026-01-30T20:33:38.323Z"
+},
+{
+  "fixture": "haControlLight",
+  "options": {
+    "algorithm": "mrtree",
+    "postLayoutAdjust": {
+      "enabled": true,
+      "upperOffset": -80,
+      "lowerOffset": 80
+    },
+    "elkPartitioning": false,
+    "twoPassYSort": true
+  },
+  "direction": "horizontal",
+  "nodes": [
+    {
+      "id": "trigger-001",
+      "kind": "trigger",
+      "partition": 0,
+      "x": 20,
+      "y": 79
+    },
+    {
+      "id": "log-request-001",
+      "kind": "action",
+      "partition": 0,
+      "x": 220,
+      "y": 74
+    },
+    {
+      "id": "try-main-001",
+      "kind": "try",
+      "partition": 0,
+      "x": 460,
+      "y": 93
+    },
+    {
+      "id": "call-service-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 550,
+      "y": -60
+    },
+    {
+      "id": "get-state-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 790,
+      "y": -60
+    },
+    {
+      "id": "return-success-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 1030,
+      "y": -60
+    },
+    {
+      "id": "catch-error-001",
+      "kind": "catch",
+      "partition": 0,
+      "x": 620,
+      "y": 147
+    },
+    {
+      "id": "log-error-001",
+      "kind": "action",
+      "partition": 2,
+      "x": 790,
+      "y": 208
+    },
+    {
+      "id": "check-not-found",
+      "kind": "if",
+      "partition": 0,
+      "x": 1105,
+      "y": 147
+    },
+    {
+      "id": "check-not-found::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 1273,
+      "y": -41
+    },
+    {
+      "id": "return-404-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 1360,
+      "y": 5
+    },
+    {
+      "id": "check-not-found::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 1273,
+      "y": 274
+    },
+    {
+      "id": "check-unauthorized",
+      "kind": "if",
+      "partition": 0,
+      "x": 1435,
+      "y": 191
+    },
+    {
+      "id": "check-unauthorized::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 1601,
+      "y": 70
+    },
+    {
+      "id": "return-401-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 1685,
+      "y": 48
+    },
+    {
+      "id": "check-unauthorized::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 1601,
+      "y": 317
+    },
+    {
+      "id": "check-403",
+      "kind": "if",
+      "partition": 0,
+      "x": 1760,
+      "y": 234
+    },
+    {
+      "id": "check-403::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 1926,
+      "y": 104
+    },
+    {
+      "id": "return-403-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 2010,
+      "y": 82
+    },
+    {
+      "id": "check-403::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 1926,
+      "y": 369
+    },
+    {
+      "id": "return-500-001",
+      "kind": "action",
+      "partition": 2,
+      "x": 2010,
+      "y": 347
+    },
+    {
+      "id": "::end",
+      "kind": "end",
+      "partition": 0,
+      "x": 2310,
+      "y": 138
+    }
+  ],
+  "feedback": "Just showing that odd edge wobbles persist in horizontal layout: node0-1, 2-3",
+  "exportedAt": "2026-01-30T20:33:52.590Z"
+},
+{
+  "fixture": "haControlLight",
+  "options": {
+    "algorithm": "layered",
+    "postLayoutAdjust": {
+      "enabled": true,
+      "upperOffset": -80,
+      "lowerOffset": 80
+    },
+    "elkPartitioning": false,
+    "twoPassYSort": true
+  },
+  "direction": "vertical",
+  "nodes": [
+    {
+      "id": "trigger-001",
+      "kind": "trigger",
+      "partition": 0,
+      "x": 162,
+      "y": 20
+    },
+    {
+      "id": "log-request-001",
+      "kind": "action",
+      "partition": 0,
+      "x": 142,
+      "y": 175
+    },
+    {
+      "id": "try-main-001",
+      "kind": "try",
+      "partition": 0,
+      "x": 217,
+      "y": 340
+    },
+    {
+      "id": "call-service-001",
+      "kind": "action",
+      "partition": 1,
+      "x": -24,
+      "y": 468
+    },
+    {
+      "id": "get-state-001",
+      "kind": "action",
+      "partition": 1,
+      "x": -60,
+      "y": 633
+    },
+    {
+      "id": "return-success-001",
+      "kind": "action",
+      "partition": 1,
+      "x": -60,
+      "y": 798
+    },
+    {
+      "id": "catch-error-001",
+      "kind": "catch",
+      "partition": 0,
+      "x": 370,
+      "y": 562
+    },
+    {
+      "id": "log-error-001",
+      "kind": "action",
+      "partition": 2,
+      "x": 380,
+      "y": 690
+    },
+    {
+      "id": "check-not-found",
+      "kind": "if",
+      "partition": 0,
+      "x": 368,
+      "y": 855
+    },
+    {
+      "id": "check-not-found::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 94,
+      "y": 963
+    },
+    {
+      "id": "return-404-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 16,
+      "y": 1085
+    },
+    {
+      "id": "check-not-found::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 459,
+      "y": 983
+    },
+    {
+      "id": "check-unauthorized",
+      "kind": "if",
+      "partition": 0,
+      "x": 377,
+      "y": 1115
+    },
+    {
+      "id": "check-unauthorized::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 30,
+      "y": 1243
+    },
+    {
+      "id": "return-401-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 69,
+      "y": 1345
+    },
+    {
+      "id": "check-unauthorized::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 467,
+      "y": 1250
+    },
+    {
+      "id": "check-403",
+      "kind": "if",
+      "partition": 0,
+      "x": 647,
+      "y": 1372
+    },
+    {
+      "id": "check-403::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 63,
+      "y": 1510
+    },
+    {
+      "id": "return-403-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 27,
+      "y": 1632
+    },
+    {
+      "id": "check-403::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 545,
+      "y": 1500
+    },
+    {
+      "id": "return-500-001",
+      "kind": "action",
+      "partition": 2,
+      "x": 467,
+      "y": 1622
+    },
+    {
+      "id": "::end",
+      "kind": "end",
+      "partition": 0,
+      "x": 326,
+      "y": 1797
+    }
+  ],
+  "feedback": "I think the MRTree is slightly better than layered because it's more compact--which will be better for complex recipes.",
+  "exportedAt": "2026-01-30T20:34:00.765Z"
+},
+{
+  "fixture": "haControlLight",
+  "options": {
+    "algorithm": "layered",
+    "postLayoutAdjust": {
+      "enabled": true,
+      "upperOffset": -80,
+      "lowerOffset": 80
+    },
+    "elkPartitioning": false,
+    "twoPassYSort": true
+  },
+  "direction": "horizontal",
+  "nodes": [
+    {
+      "id": "trigger-001",
+      "kind": "trigger",
+      "partition": 0,
+      "x": 20,
+      "y": 78
+    },
+    {
+      "id": "log-request-001",
+      "kind": "action",
+      "partition": 0,
+      "x": 280,
+      "y": 73
+    },
+    {
+      "id": "try-main-001",
+      "kind": "try",
+      "partition": 0,
+      "x": 580,
+      "y": 91
+    },
+    {
+      "id": "call-service-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 730,
+      "y": -57
+    },
+    {
+      "id": "get-state-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 1030,
+      "y": -60
+    },
+    {
+      "id": "return-success-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 1330,
+      "y": -60
+    },
+    {
+      "id": "catch-error-001",
+      "kind": "catch",
+      "partition": 0,
+      "x": 1030,
+      "y": 184
+    },
+    {
+      "id": "log-error-001",
+      "kind": "action",
+      "partition": 2,
+      "x": 1190,
+      "y": 245
+    },
+    {
+      "id": "check-not-found",
+      "kind": "if",
+      "partition": 0,
+      "x": 1490,
+      "y": 184
+    },
+    {
+      "id": "check-not-found::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 1630,
+      "y": -5
+    },
+    {
+      "id": "return-404-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 1775,
+      "y": -27
+    },
+    {
+      "id": "check-not-found::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 1640,
+      "y": 281
+    },
+    {
+      "id": "check-unauthorized",
+      "kind": "if",
+      "partition": 0,
+      "x": 1785,
+      "y": 198
+    },
+    {
+      "id": "check-unauthorized::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 1915,
+      "y": 177
+    },
+    {
+      "id": "return-401-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 2060,
+      "y": 43
+    },
+    {
+      "id": "check-unauthorized::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 2075,
+      "y": 358
+    },
+    {
+      "id": "check-403",
+      "kind": "if",
+      "partition": 0,
+      "x": 2220,
+      "y": 120
+    },
+    {
+      "id": "check-403::then",
+      "kind": "branch",
+      "partition": 1,
+      "x": 2360,
+      "y": -16
+    },
+    {
+      "id": "return-403-001",
+      "kind": "action",
+      "partition": 1,
+      "x": 2505,
+      "y": -16
+    },
+    {
+      "id": "check-403::else",
+      "kind": "branch",
+      "partition": 2,
+      "x": 2350,
+      "y": 311
+    },
+    {
+      "id": "return-500-001",
+      "kind": "action",
+      "partition": 2,
+      "x": 2495,
+      "y": 289
+    },
+    {
+      "id": "::end",
+      "kind": "end",
+      "partition": 0,
+      "x": 2805,
+      "y": 132
+    }
+  ],
+  "feedback": "For horizontal, layered is getting the node spacing better than MRTree--but i think we can probably fix the spacing issue with better rules for node sizes/padding.",
+  "exportedAt": "2026-01-30T20:34:06.211Z"
+}
+]
