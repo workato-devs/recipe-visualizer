@@ -1,0 +1,331 @@
+{
+  "name": "Process Order with Sub-Recipes",
+  "version": 1,
+  "private": true,
+  "concurrency": 1,
+  "code": {
+    "number": 0,
+    "provider": "workato_api_platform",
+    "name": "receive_request",
+    "as": "trigger",
+    "keyword": "trigger",
+    "input": {
+      "request_schema_json": "[{\"name\":\"order_id\",\"label\":\"Order ID\",\"type\":\"string\"},{\"name\":\"customer_email\",\"label\":\"Customer Email\",\"type\":\"string\"},{\"name\":\"items\",\"label\":\"Items\",\"type\":\"array\",\"of\":\"object\",\"properties\":[{\"name\":\"sku\",\"type\":\"string\"},{\"name\":\"quantity\",\"type\":\"integer\"}]}]"
+    },
+    "extended_output_schema": [
+      {
+        "label": "Order ID",
+        "name": "order_id",
+        "type": "string"
+      },
+      {
+        "label": "Customer Email",
+        "name": "customer_email",
+        "type": "string"
+      },
+      {
+        "label": "Items",
+        "name": "items",
+        "type": "array",
+        "of": "object",
+        "properties": [
+          {"name": "sku", "type": "string"},
+          {"name": "quantity", "type": "integer"}
+        ]
+      }
+    ],
+    "block": [
+      {
+        "number": 1,
+        "keyword": "try",
+        "uuid": "order-try-001",
+        "block": [
+          {
+            "number": 2,
+            "provider": "workato_recipe_function",
+            "name": "call_recipe",
+            "as": "validate_customer",
+            "keyword": "action",
+            "dynamicPickListSelection": {
+              "flow_id": "Validate Customer"
+            },
+            "input": {
+              "flow_id": {
+                "zip_name": "customer-recipes/validate_customer.recipe.json",
+                "name": "Validate Customer",
+                "folder": "customer-recipes",
+                "folder_full_path": "Home/customer-recipes"
+              },
+              "parameters": {
+                "email": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"trigger\",\"path\":[\"customer_email\"]}')}"
+              }
+            },
+            "extended_output_schema": [
+              {
+                "label": "Result",
+                "name": "result",
+                "type": "object",
+                "properties": [
+                  {"name": "customer_id", "type": "string"},
+                  {"name": "is_valid", "type": "boolean"},
+                  {"name": "loyalty_tier", "type": "string"}
+                ]
+              }
+            ],
+            "uuid": "order-validate-customer-001"
+          },
+          {
+            "number": 3,
+            "keyword": "if",
+            "as": "check_customer_valid",
+            "uuid": "order-check-valid-001",
+            "input": {
+              "type": "compound",
+              "operand": "and",
+              "conditions": [
+                {
+                  "operand": "equals",
+                  "lhs": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_recipe_function\",\"line\":\"validate_customer\",\"path\":[\"result\",\"is_valid\"]}')}",
+                  "rhs": "true"
+                }
+              ]
+            },
+            "block": [
+              {
+                "number": 4,
+                "provider": "workato_recipe_function",
+                "name": "call_recipe",
+                "as": "check_inventory",
+                "keyword": "action",
+                "dynamicPickListSelection": {
+                  "flow_id": "Check Inventory Availability"
+                },
+                "input": {
+                  "flow_id": {
+                    "zip_name": "inventory-recipes/check_inventory.recipe.json",
+                    "name": "Check Inventory Availability",
+                    "folder": "inventory-recipes",
+                    "folder_full_path": "Home/inventory-recipes"
+                  },
+                  "parameters": {
+                    "items": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"trigger\",\"path\":[\"items\"]}')}"
+                  }
+                },
+                "extended_output_schema": [
+                  {
+                    "label": "Result",
+                    "name": "result",
+                    "type": "object",
+                    "properties": [
+                      {"name": "all_available", "type": "boolean"},
+                      {"name": "unavailable_items", "type": "array", "of": "string"}
+                    ]
+                  }
+                ],
+                "uuid": "order-check-inventory-001"
+              },
+              {
+                "number": 5,
+                "keyword": "if",
+                "as": "check_inventory_available",
+                "uuid": "order-check-inventory-available-001",
+                "input": {
+                  "type": "compound",
+                  "operand": "and",
+                  "conditions": [
+                    {
+                      "operand": "equals",
+                      "lhs": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_recipe_function\",\"line\":\"check_inventory\",\"path\":[\"result\",\"all_available\"]}')}",
+                      "rhs": "true"
+                    }
+                  ]
+                },
+                "block": [
+                  {
+                    "number": 6,
+                    "provider": "workato_recipe_function",
+                    "name": "call_recipe",
+                    "as": "create_order",
+                    "keyword": "action",
+                    "dynamicPickListSelection": {
+                      "flow_id": "Create Order in ERP"
+                    },
+                    "input": {
+                      "flow_id": {
+                        "zip_name": "erp-recipes/create_order.recipe.json",
+                        "name": "Create Order in ERP",
+                        "folder": "erp-recipes",
+                        "folder_full_path": "Home/erp-recipes"
+                      },
+                      "parameters": {
+                        "order_id": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"trigger\",\"path\":[\"order_id\"]}')}",
+                        "customer_id": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_recipe_function\",\"line\":\"validate_customer\",\"path\":[\"result\",\"customer_id\"]}')}",
+                        "items": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"trigger\",\"path\":[\"items\"]}')}"
+                      }
+                    },
+                    "extended_output_schema": [
+                      {
+                        "label": "Result",
+                        "name": "result",
+                        "type": "object",
+                        "properties": [
+                          {"name": "erp_order_id", "type": "string"},
+                          {"name": "total_amount", "type": "number"}
+                        ]
+                      }
+                    ],
+                    "uuid": "order-create-erp-001"
+                  },
+                  {
+                    "number": 7,
+                    "provider": "workato_recipe_function",
+                    "name": "call_recipe",
+                    "as": "send_confirmation",
+                    "keyword": "action",
+                    "dynamicPickListSelection": {
+                      "flow_id": "Send Order Confirmation Email"
+                    },
+                    "input": {
+                      "flow_id": {
+                        "zip_name": "notification-recipes/send_order_confirmation.recipe.json",
+                        "name": "Send Order Confirmation Email",
+                        "folder": "notification-recipes",
+                        "folder_full_path": "Home/notification-recipes"
+                      },
+                      "parameters": {
+                        "email": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"trigger\",\"path\":[\"customer_email\"]}')}",
+                        "order_id": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"trigger\",\"path\":[\"order_id\"]}')}",
+                        "total": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_recipe_function\",\"line\":\"create_order\",\"path\":[\"result\",\"total_amount\"]}')}"
+                      }
+                    },
+                    "uuid": "order-send-confirm-001"
+                  },
+                  {
+                    "number": 8,
+                    "provider": "workato_api_platform",
+                    "name": "return_response",
+                    "as": "return_success",
+                    "keyword": "action",
+                    "input": {
+                      "http_status_code": "200",
+                      "response": {
+                        "success": "true",
+                        "order_id": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"trigger\",\"path\":[\"order_id\"]}')}",
+                        "erp_order_id": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_recipe_function\",\"line\":\"create_order\",\"path\":[\"result\",\"erp_order_id\"]}')}"
+                      }
+                    },
+                    "uuid": "order-return-success-001"
+                  },
+                  {
+                    "keyword": "else",
+                    "uuid": "order-inventory-else-001",
+                    "block": [
+                      {
+                        "number": 9,
+                        "provider": "workato_api_platform",
+                        "name": "return_response",
+                        "as": "return_out_of_stock",
+                        "keyword": "action",
+                        "input": {
+                          "http_status_code": "422",
+                          "response": {
+                            "success": "false",
+                            "error": "Items out of stock",
+                            "unavailable_items": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_recipe_function\",\"line\":\"check_inventory\",\"path\":[\"result\",\"unavailable_items\"]}')}"
+                          }
+                        },
+                        "uuid": "order-return-oos-001"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "keyword": "else",
+                "uuid": "order-customer-else-001",
+                "block": [
+                  {
+                    "number": 10,
+                    "provider": "workato_api_platform",
+                    "name": "return_response",
+                    "as": "return_invalid_customer",
+                    "keyword": "action",
+                    "input": {
+                      "http_status_code": "400",
+                      "response": {
+                        "success": "false",
+                        "error": "Invalid customer"
+                      }
+                    },
+                    "uuid": "order-return-invalid-001"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "number": 11,
+            "as": "order-catch-001",
+            "keyword": "catch",
+            "uuid": "order-catch-001",
+            "input": {
+              "max_retry_count": "0",
+              "retry_interval": "2"
+            },
+            "block": [
+              {
+                "number": 12,
+                "provider": "logger",
+                "name": "log_message",
+                "as": "log_error",
+                "keyword": "action",
+                "input": {
+                  "message": "Order processing failed: #{_dp('{\"pill_type\":\"output\",\"provider\":\"catch\",\"line\":\"order-catch-001\",\"path\":[\"message\"]}')}",
+                  "user_logs_enabled": "false"
+                },
+                "uuid": "order-log-error-001"
+              },
+              {
+                "number": 13,
+                "provider": "workato_api_platform",
+                "name": "return_response",
+                "as": "return_error",
+                "keyword": "action",
+                "input": {
+                  "http_status_code": "500",
+                  "response": {
+                    "success": "false",
+                    "error": "Internal server error"
+                  }
+                },
+                "uuid": "order-return-error-001"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "uuid": "order-trigger-001",
+    "format_version": 2
+  },
+  "config": [
+    {
+      "keyword": "application",
+      "provider": "workato_api_platform",
+      "skip_validation": false,
+      "account_id": null
+    },
+    {
+      "keyword": "application",
+      "provider": "workato_recipe_function",
+      "skip_validation": false,
+      "account_id": null
+    },
+    {
+      "keyword": "application",
+      "provider": "logger",
+      "skip_validation": false,
+      "account_id": null
+    }
+  ]
+}

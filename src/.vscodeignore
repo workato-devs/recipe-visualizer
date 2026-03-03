@@ -1,0 +1,26 @@
+# Source files (not needed in package)
+core/**
+extension/**
+shared/**
+webview-ui/**
+fixtures/**
+
+# Config files
+*.md
+tsconfig*.json
+vite.config.ts
+.eslintrc*
+.prettierrc*
+
+# Development
+node_modules/**
+.vscode/**
+.git/**
+
+# Build artifacts we don't need
+**/*.map
+**/*.ts
+!dist/**
+
+# Package manager
+package-lock.json

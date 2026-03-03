@@ -1,0 +1,734 @@
+/* React Flow overrides for VS Code theming */
+
+.react-flow {
+  --rf-background: var(--vscode-editor-background);
+}
+
+.react-flow__node {
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.react-flow__node:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.react-flow__node.selected {
+  z-index: 1000;
+}
+
+.react-flow__edge-path {
+  stroke-linecap: round;
+  transition: stroke-width 0.15s ease, stroke-opacity 0.15s ease;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 3px;
+  stroke-opacity: 1;
+}
+
+.react-flow__controls {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.react-flow__controls-button:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.react-flow__minimap {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+/* Edge labels */
+.react-flow__edge-textbg {
+  fill: var(--vscode-editor-background);
+  rx: 4;
+  ry: 4;
+}
+
+.react-flow__edge-text {
+  fill: var(--vscode-descriptionForeground, #8b8b8b);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Edge label colors by type */
+.react-flow__edge[data-type="true"] .react-flow__edge-text,
+.react-flow__edge.source-true .react-flow__edge-text {
+  fill: #86efac;
+}
+
+.react-flow__edge[data-type="false"] .react-flow__edge-text,
+.react-flow__edge.source-false .react-flow__edge-text {
+  fill: #fca5a5;
+}
+
+.react-flow__edge[data-type="error"] .react-flow__edge-text {
+  fill: #ef4444;
+}
+
+/* ============================================================================
+   Node Details Panel
+   ============================================================================ */
+
+.node-details-panel {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 300px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  background: var(--vscode-sideBar-background, #252526);
+  border: 1px solid var(--vscode-panel-border, #3c3c3c);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  z-index: 1000;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Custom scrollbar for details panel */
+.node-details-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.node-details-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.node-details-panel::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, 0.4));
+  border-radius: 4px;
+}
+
+.node-details-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, 0.7));
+}
+
+.node-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px;
+  border-bottom: 1px solid var(--vscode-panel-border, #3c3c3c);
+  background: var(--vscode-sideBarSectionHeader-background, #1e1e1e);
+}
+
+.node-details-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.node-kind-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: #374151;
+  color: #9ca3af;
+  width: fit-content;
+  transition: background 0.15s ease;
+}
+
+.node-kind-badge.trigger {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.node-kind-badge.action {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+.node-kind-badge.if,
+.node-kind-badge.try {
+  background: rgba(107, 114, 128, 0.3);
+  color: #d1d5db;
+}
+
+.node-kind-badge.catch {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.node-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--vscode-foreground, #cccccc);
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.go-to-code-button {
+  background: var(--vscode-button-secondaryBackground, #3a3d41);
+  border: 1px solid var(--vscode-button-border, transparent);
+  color: var(--vscode-button-secondaryForeground, #cccccc);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.go-to-code-button:hover {
+  background: var(--vscode-button-secondaryHoverBackground, #45494e);
+}
+
+.go-to-code-button:active {
+  transform: scale(0.97);
+}
+
+.open-recipe-button {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.open-recipe-button:hover {
+  background: rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+.open-recipe-button:active {
+  transform: scale(0.97);
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  color: var(--vscode-foreground, #cccccc);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  opacity: 0.6;
+  border-radius: 4px;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.close-button:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.node-details-content {
+  padding: 12px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 4px 0;
+  gap: 8px;
+}
+
+.detail-label {
+  color: var(--vscode-descriptionForeground, #8b8b8b);
+  flex-shrink: 0;
+}
+
+.detail-value {
+  color: var(--vscode-foreground, #cccccc);
+  text-align: right;
+  word-break: break-word;
+}
+
+.detail-value.mono {
+  font-family: var(--vscode-editor-font-family, monospace);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.detail-value.small {
+  font-size: 10px;
+}
+
+.http-status {
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.http-status.status-2xx {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.http-status.status-3xx {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.http-status.status-4xx {
+  background: rgba(249, 115, 22, 0.2);
+  color: #f97316;
+}
+
+.http-status.status-5xx {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.section-divider {
+  height: 1px;
+  background: var(--vscode-panel-border, #3c3c3c);
+  margin: 12px 0;
+}
+
+.section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground, #8b8b8b);
+  margin-bottom: 8px;
+}
+
+.schema-badges,
+.flag-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.schema-badge,
+.flag-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  transition: transform 0.1s ease;
+}
+
+.schema-badge:hover,
+.flag-badge:hover {
+  transform: scale(1.02);
+}
+
+.schema-badge.input {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.schema-badge.output {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+}
+
+.flag-badge.terminal {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fb923c;
+}
+
+.flag-badge.recipe-call {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+.source-link {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--vscode-panel-border, #3c3c3c);
+  border-radius: 4px;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+  word-break: break-all;
+}
+
+.source-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--vscode-textLink-foreground, #3794ff);
+}
+
+/* ============================================================================
+   Schema Preview
+   ============================================================================ */
+
+.section-title-clickable {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.section-title-clickable:hover {
+  color: var(--vscode-foreground, #cccccc);
+}
+
+.schema-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.schema-indicator.input {
+  background: #60a5fa;
+}
+
+.schema-indicator.output {
+  background: #c084fc;
+}
+
+.field-count {
+  font-weight: 400;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+
+.expand-indicator {
+  font-size: 8px;
+  opacity: 0.6;
+  margin-left: auto;
+}
+
+.expand-indicator.small {
+  font-size: 7px;
+  margin-left: 0;
+  margin-right: 4px;
+  width: 10px;
+  flex-shrink: 0;
+}
+
+.schema-fields {
+  margin-top: 6px;
+}
+
+.schema-field {
+  font-size: 11px;
+}
+
+.schema-field-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 0;
+  gap: 6px;
+}
+
+.schema-field-row.expandable {
+  cursor: pointer;
+}
+
+.schema-field-row.expandable:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.schema-field-name {
+  color: var(--vscode-foreground, #cccccc);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.required-marker {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.schema-field-type {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--vscode-descriptionForeground, #8b8b8b);
+  flex-shrink: 0;
+}
+
+.schema-field-type.type-string {
+  color: #86efac;
+}
+
+.schema-field-type.type-boolean {
+  color: #fbbf24;
+}
+
+.schema-field-type.type-integer,
+.schema-field-type.type-number {
+  color: #60a5fa;
+}
+
+.schema-field-type.type-object {
+  color: #c084fc;
+}
+
+.schema-field-type.type-array {
+  color: #f472b6;
+}
+
+.schema-field-children {
+  border-left: 1px solid var(--vscode-panel-border, #3c3c3c);
+  margin-left: 4px;
+  padding-left: 4px;
+}
+
+.schema-more {
+  padding: 4px 0;
+  font-size: 10px;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.schema-more:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* Schema field values */
+.schema-field-value {
+  color: var(--vscode-textPreformat-foreground, #d4d4d4);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 10px;
+  margin-left: auto;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+.schema-field-value.empty {
+  color: var(--vscode-disabledForeground, #6b6b6b);
+}
+
+/* Warning indicators for unmapped required fields */
+.unmapped-warning {
+  color: var(--vscode-editorWarning-foreground, #cca700);
+  font-size: 10px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.field-warning-icon {
+  color: var(--vscode-editorWarning-foreground, #cca700);
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.schema-field-row.warning {
+  background-color: rgba(204, 167, 0, 0.1);
+  border-radius: 2px;
+  padding: 3px 4px;
+  margin: 0 -4px;
+}
+
+/* ============================================================================
+   Step Inputs
+   ============================================================================ */
+
+.inputs-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fbbf24;
+  flex-shrink: 0;
+}
+
+.inputs-list {
+  margin-top: 6px;
+}
+
+.input-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 3px 0;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.input-key {
+  color: var(--vscode-descriptionForeground, #8b8b8b);
+  flex-shrink: 0;
+  min-width: 80px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.input-value {
+  color: var(--vscode-foreground, #cccccc);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 10px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* ============================================================================
+   Debug Mode - Partition Visualization
+   ============================================================================ */
+
+/* Partition glow effects for nodes */
+.react-flow__node.partition-0 {
+  box-shadow: 0 0 8px 2px rgba(107, 114, 128, 0.3);
+}
+
+.react-flow__node.partition-1 {
+  box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.5);
+}
+
+.react-flow__node.partition-2 {
+  box-shadow: 0 0 12px 4px rgba(239, 68, 68, 0.5);
+}
+
+/* Partition indicator badges that can be added to nodes */
+.partition-indicator {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  z-index: 10;
+}
+
+.partition-indicator.p0 {
+  background: #6b7280;
+}
+
+.partition-indicator.p1 {
+  background: #22c55e;
+}
+
+.partition-indicator.p2 {
+  background: #ef4444;
+}
+
+/* Debug panel custom scrollbar */
+.debug-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.debug-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.debug-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.debug-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Range slider styling for debug controls */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: #374151;
+  border-radius: 2px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #60a5fa;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #1e3a5f;
+  transition: background 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #3b82f6;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: #60a5fa;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #1e3a5f;
+}
+
+/* Snapshot card hover effect */
+.snapshot-card {
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.snapshot-card:hover {
+  background: #283548;
+  transform: translateY(-1px);
+}

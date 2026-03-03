@@ -1,0 +1,98 @@
+{
+  "name": "recipe-visualizer",
+  "displayName": "Recipe Visualizer",
+  "description": "Visualize Workato recipe JSON files as interactive workflow graphs",
+  "version": "0.4.2",
+  "publisher": "your-publisher-id",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18.0.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:json",
+    "onCommand:recipeVisualizer.open",
+    "onCommand:recipeVisualizer.openFromContext"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "recipeVisualizer.open",
+        "title": "Open Recipe Visualizer",
+        "category": "Recipe Visualizer"
+      },
+      {
+        "command": "recipeVisualizer.openFromContext",
+        "title": "Visualize Recipe"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceFilename =~ /\\.recipe\\.json$/",
+          "command": "recipeVisualizer.open",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceFilename =~ /\\.recipe\\.json$/",
+          "command": "recipeVisualizer.openFromContext",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceFilename =~ /\\.recipe\\.json$/",
+          "command": "recipeVisualizer.open",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "recipeVisualizer.open",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "editorTextFocus && resourceFilename =~ /\\.recipe\\.json$/"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run build:extension && npm run build:webview",
+    "build:extension": "esbuild extension/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "build:webview": "vite build --config webview-ui/vite.config.ts",
+    "watch:extension": "esbuild extension/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "dev:webview": "vite --config webview-ui/vite.config.ts",
+    "test": "tsx core/transformer.test.ts",
+    "package": "vsce package --no-dependencies -o releases/",
+    "lint": "eslint . --ext .ts,.tsx"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@types/vscode": "^1.85.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.0.0",
+    "elkjs": "^0.11.0",
+    "html-to-image": "^1.11.13",
+    "jsonc-parser": "^3.3.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
