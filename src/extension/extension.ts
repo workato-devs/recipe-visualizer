@@ -27,8 +27,9 @@ export function activate(context: vscode.ExtensionContext) {
   const openFromContextCommand = vscode.commands.registerCommand(
     "recipeVisualizer.openFromContext",
     (uri: vscode.Uri) => {
-      vscode.workspace.openTextDocument(uri).then((document) => {
+      vscode.workspace.openTextDocument(uri).then(async (document) => {
         if (isRecipeFile(document)) {
+          await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.One });
           RecipeVisualizerPanel.createOrShow(context.extensionUri, document);
         } else {
           vscode.window.showWarningMessage("This does not appear to be a recipe JSON file");
@@ -58,6 +59,18 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  // Auto-switch visualizer when active editor changes to a recipe file.
+  // Also ensure recipe files open in ViewColumn.One (left) when the visualizer is open,
+  // since VS Code may place them in the visualizer's column (right) by default.
+  const activeEditorChangeListener = vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+    if (editor && isRecipeFile(editor.document)) {
+      if (RecipeVisualizerPanel.currentPanel && editor.viewColumn !== vscode.ViewColumn.One) {
+        await vscode.commands.executeCommand('workbench.action.moveEditorToFirstGroup');
+      }
+      RecipeVisualizerPanel.switchToDocument(editor.document);
+    }
+  });
+
   // Watch for document close to close visualization
   const documentCloseListener = vscode.workspace.onDidCloseTextDocument((document) => {
     RecipeVisualizerPanel.closeIfDocumentClosed(document);
@@ -69,6 +82,7 @@ export function activate(context: vscode.ExtensionContext) {
     documentChangeListener,
     documentSaveListener,
     selectionChangeListener,
+    activeEditorChangeListener,
     documentCloseListener
   );
 }

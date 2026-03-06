@@ -2,9 +2,13 @@
   "name": "recipe-visualizer",
   "displayName": "Recipe Visualizer",
   "description": "Visualize Workato recipe JSON files as interactive workflow graphs",
-  "version": "0.4.2",
+  "version": "0.5.2",
   "publisher": "your-publisher-id",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/workato-devs/visualizer-ext-beta.git"
+  },
   "engines": {
     "vscode": "^1.85.0",
     "node": ">=18.0.0"
@@ -24,7 +28,8 @@
       {
         "command": "recipeVisualizer.open",
         "title": "Open Recipe Visualizer",
-        "category": "Recipe Visualizer"
+        "category": "Recipe Visualizer",
+        "icon": "$(open-preview)"
       },
       {
         "command": "recipeVisualizer.openFromContext",

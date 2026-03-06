@@ -31,9 +31,9 @@ export class RecipeVisualizerPanel {
 
     // If we already have a panel, show it
     if (RecipeVisualizerPanel.currentPanel) {
-      RecipeVisualizerPanel.currentPanel._panel.reveal(column);
       RecipeVisualizerPanel.currentPanel._document = document;
       RecipeVisualizerPanel.currentPanel._updateGraph();
+      RecipeVisualizerPanel.currentPanel._panel.reveal(column);
       return;
     }
 
@@ -62,6 +62,13 @@ export class RecipeVisualizerPanel {
       RecipeVisualizerPanel.currentPanel._document.uri.toString() ===
         document.uri.toString()
     ) {
+      RecipeVisualizerPanel.currentPanel._document = document;
+      RecipeVisualizerPanel.currentPanel._updateGraph();
+    }
+  }
+
+  public static switchToDocument(document: vscode.TextDocument) {
+    if (RecipeVisualizerPanel.currentPanel) {
       RecipeVisualizerPanel.currentPanel._document = document;
       RecipeVisualizerPanel.currentPanel._updateGraph();
     }
@@ -254,6 +261,7 @@ export class RecipeVisualizerPanel {
 
     if (files.length > 0) {
       const doc = await vscode.workspace.openTextDocument(files[0]);
+      await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One });
       RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
       return;
     }
@@ -266,6 +274,7 @@ export class RecipeVisualizerPanel {
 
       if (fallbackFiles.length > 0) {
         const doc = await vscode.workspace.openTextDocument(fallbackFiles[0]);
+        await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One });
         RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
         return;
       }

@@ -1941,9 +1941,9 @@ var RecipeVisualizerPanel = class _RecipeVisualizerPanel {
   static createOrShow(extensionUri, document) {
     const column = vscode2.ViewColumn.Beside;
     if (_RecipeVisualizerPanel.currentPanel) {
-      _RecipeVisualizerPanel.currentPanel._panel.reveal(column);
       _RecipeVisualizerPanel.currentPanel._document = document;
       _RecipeVisualizerPanel.currentPanel._updateGraph();
+      _RecipeVisualizerPanel.currentPanel._panel.reveal(column);
       return;
     }
     const panel = vscode2.window.createWebviewPanel(
@@ -1964,6 +1964,12 @@ var RecipeVisualizerPanel = class _RecipeVisualizerPanel {
   }
   static updateIfActive(document) {
     if (_RecipeVisualizerPanel.currentPanel && _RecipeVisualizerPanel.currentPanel._document.uri.toString() === document.uri.toString()) {
+      _RecipeVisualizerPanel.currentPanel._document = document;
+      _RecipeVisualizerPanel.currentPanel._updateGraph();
+    }
+  }
+  static switchToDocument(document) {
+    if (_RecipeVisualizerPanel.currentPanel) {
       _RecipeVisualizerPanel.currentPanel._document = document;
       _RecipeVisualizerPanel.currentPanel._updateGraph();
     }
@@ -2092,6 +2098,7 @@ var RecipeVisualizerPanel = class _RecipeVisualizerPanel {
     const files = await vscode2.workspace.findFiles(pattern, "**/node_modules/**", 1);
     if (files.length > 0) {
       const doc = await vscode2.workspace.openTextDocument(files[0]);
+      await vscode2.window.showTextDocument(doc, { viewColumn: vscode2.ViewColumn.One });
       _RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
       return;
     }
@@ -2101,6 +2108,7 @@ var RecipeVisualizerPanel = class _RecipeVisualizerPanel {
       const fallbackFiles = await vscode2.workspace.findFiles(fallbackPattern, "**/node_modules/**", 1);
       if (fallbackFiles.length > 0) {
         const doc = await vscode2.workspace.openTextDocument(fallbackFiles[0]);
+        await vscode2.window.showTextDocument(doc, { viewColumn: vscode2.ViewColumn.One });
         _RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
         return;
       }
@@ -2189,8 +2197,9 @@ function activate(context) {
   const openFromContextCommand = vscode3.commands.registerCommand(
     "recipeVisualizer.openFromContext",
     (uri) => {
-      vscode3.workspace.openTextDocument(uri).then((document) => {
+      vscode3.workspace.openTextDocument(uri).then(async (document) => {
         if (isRecipeFile(document)) {
+          await vscode3.window.showTextDocument(document, { viewColumn: vscode3.ViewColumn.One });
           RecipeVisualizerPanel.createOrShow(context.extensionUri, document);
         } else {
           vscode3.window.showWarningMessage("This does not appear to be a recipe JSON file");
@@ -2213,6 +2222,14 @@ function activate(context) {
       RecipeVisualizerPanel.syncSelection(e.textEditor);
     }
   });
+  const activeEditorChangeListener = vscode3.window.onDidChangeActiveTextEditor(async (editor) => {
+    if (editor && isRecipeFile(editor.document)) {
+      if (RecipeVisualizerPanel.currentPanel && editor.viewColumn !== vscode3.ViewColumn.One) {
+        await vscode3.commands.executeCommand("workbench.action.moveEditorToFirstGroup");
+      }
+      RecipeVisualizerPanel.switchToDocument(editor.document);
+    }
+  });
   const documentCloseListener = vscode3.workspace.onDidCloseTextDocument((document) => {
     RecipeVisualizerPanel.closeIfDocumentClosed(document);
   });
@@ -2222,6 +2239,7 @@ function activate(context) {
     documentChangeListener,
     documentSaveListener,
     selectionChangeListener,
+    activeEditorChangeListener,
     documentCloseListener
   );
 }
