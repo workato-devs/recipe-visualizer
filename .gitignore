@@ -1,1 +1,30 @@
-node_modules
+# Build output                                                                                                                                                                                            
+*.vsix                                                               
+
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor & IDE                                                                                                                                                                                            
+.idea/
+*.swp                                                                                                                                                                                                     
+*.swo                                                                
+*~
+
+# Environment & secrets
+*.env
+
+# Agent tooling
+.claude/settings.local.json
+.cursor/
+.cursorrules
+.windsurf/
+.windsurfrules
+.aider*
+                                                                                                                                                                                                            
+# Test & dev artifacts
+coverage/                                                                                                                                                                                                 
+*.log 
