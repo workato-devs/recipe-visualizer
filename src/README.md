@@ -2,7 +2,6 @@
 
 A VS Code extension that visualizes Workato recipe JSON files as interactive workflow graphs. Recipes are nested JSON structures with control flow (`try/catch`, `if/else`, `foreach`) and actions (Salesforce, Stripe, etc.). The visualizer converts these to a graph model and renders them using React Flow.
 
-**Version:** 0.4.2
 **Compatible with:** VS Code, Cursor, Windsurf (any VS Code fork)
 
 ---
@@ -28,7 +27,7 @@ npm run package     # Creates releases/recipe-visualizer-X.X.X.vsix
 
 ### Install
 ```bash
-code --install-extension releases/recipe-visualizer-0.4.2.vsix
+code --install-extension releases/recipe-visualizer-<version>.vsix
 # Also works with: cursor, windsurf
 ```
 
