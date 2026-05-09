@@ -264,15 +264,11 @@ function getEdgeStyle(edge: IgmEdge): React.CSSProperties {
   }
 }
 
-// Import fixtures for development mode
-import upsertContactFixture from "../../fixtures/upsert_contact.recipe.json";
-import haControlLightFixture from "../../fixtures/ha_api_control_light.recipe.json";
-import searchRoomsForeachFixture from "../../fixtures/search_rooms_foreach.recipe.json";
-import orderProcessingFixture from "../../fixtures/order_processing_with_calls.recipe.json";
-import createBookingFixture from "../../fixtures/create_booking_orchestrator.recipe.json";
+// Import all fixtures dynamically via Vite glob
 import { buildIgm } from "../../core/transformer";
 
-// Available demo graphs
+const fixtureModules = import.meta.glob("../../fixtures/*.recipe.json", { eager: true }) as Record<string, { default: unknown }>;
+
 const demoGraphs: Record<string, IgmGraph> = {
   simple: {
     nodes: [
@@ -287,12 +283,14 @@ const demoGraphs: Record<string, IgmGraph> = {
     roots: ["demo-trigger"],
     meta: { name: "Simple Demo", version: 1, private: true, concurrency: 1, connections: [] },
   },
-  upsertContact: buildIgm(upsertContactFixture),
-  haControlLight: buildIgm(haControlLightFixture),
-  searchRoomsForeach: buildIgm(searchRoomsForeachFixture),
-  orderProcessing: buildIgm(orderProcessingFixture),
-  createBooking: buildIgm(createBookingFixture),
 };
+
+for (const [path, mod] of Object.entries(fixtureModules)) {
+  const filename = path.split("/").pop()!.replace(".recipe.json", "");
+  const key = filename.replace(/[^a-zA-Z0-9]/g, "_");
+  const recipe = (mod as any).default ?? mod;
+  demoGraphs[key] = buildIgm(recipe);
+}
 
 // Search bar component (must be inside ReactFlow)
 function SearchBar({
@@ -468,7 +466,7 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState<IgmNode | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [selectedDemo, setSelectedDemo] = useState<string>("haControlLight");
+  const [selectedDemo, setSelectedDemo] = useState<string>("ha_api_control_light");
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>("horizontal");
   const [isReady, setIsReady] = useState(false);
   const mountedRef = useRef(false);
@@ -887,12 +885,17 @@ export default function App() {
                 padding: "2px 4px",
               }}
             >
-              <option value="simple">Simple (3 nodes)</option>
-              <option value="upsertContact">Upsert Contact (try/catch)</option>
-              <option value="haControlLight">HA Control Light (nested if/else)</option>
-              <option value="searchRoomsForeach">Search Rooms (foreach loop)</option>
-              <option value="orderProcessing">Order Processing (recipe calls)</option>
-              <option value="createBooking">Create Booking Orchestrator (real)</option>
+              {Object.keys(demoGraphs).map((key) => {
+                const name = demoGraphs[key].meta?.name ?? key;
+                const isDuplicate = Object.entries(demoGraphs).some(
+                  ([k, g]) => k !== key && (g.meta?.name ?? k) === name
+                );
+                return (
+                  <option key={key} value={key}>
+                    {isDuplicate ? `${name} (${key})` : name}
+                  </option>
+                );
+              })}
             </select>
           </label>
         </div>

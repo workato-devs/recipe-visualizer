@@ -1,0 +1,204 @@
+{
+  "name": "New Golden Recipe Datatable",
+  "version": 2,
+  "private": true,
+  "concurrency": 1,
+  "code": {
+    "number": 0,
+    "provider": "workato_db_table",
+    "name": "updated_records_realtime",
+    "as": "8b805ead",
+    "keyword": "trigger",
+    "dynamicPickListSelection": {
+      "table_id": "GoldenDataTable"
+    },
+    "input": {
+      "table_id": "5565",
+      "since": "2026-05-14T00:00:00.000-07:00"
+    },
+    "filter": {
+      "conditions": [
+        {
+          "operand": "blank",
+          "lhs": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_db_table\",\"line\":\"8b805ead\",\"path\":[\"old_record\",\"11fbe9a6_a16d_4d7e_86ea_afe42ec03005\"]}')}",
+          "rhs": "",
+          "uuid": "1a9b94eb-822e-4447-a0fc-cc292b80120c"
+        }
+      ],
+      "operand": "and",
+      "type": "compound"
+    },
+    "extended_output_schema": [
+      {
+        "label": "Record",
+        "name": "record",
+        "type": "object",
+        "properties": [
+          {
+            "control_type": "text",
+            "label": "Record ID",
+            "type": "string",
+            "name": "11fbe9a6_a16d_4d7e_86ea_afe42ec03005"
+          },
+          {
+            "control_type": "text",
+            "label": "Column 1",
+            "type": "string",
+            "name": "226272d4_759a_465a_878a_40bfe8fdc12e"
+          },
+          {
+            "control_type": "date_time",
+            "label": "Created at",
+            "render_input": "date_time_conversion",
+            "parse_output": "date_time_conversion",
+            "type": "date_time",
+            "name": "a5612739_5401_4ae7_bd07_782c1a6fb2d1"
+          },
+          {
+            "control_type": "date_time",
+            "label": "Updated at",
+            "render_input": "date_time_conversion",
+            "parse_output": "date_time_conversion",
+            "type": "date_time",
+            "name": "61aae604_a95e_4519_9091_bb0bf754a67f"
+          }
+        ]
+      },
+      {
+        "label": "Old record",
+        "name": "old_record",
+        "type": "object",
+        "properties": [
+          {
+            "control_type": "text",
+            "label": "Record ID",
+            "type": "string",
+            "name": "11fbe9a6_a16d_4d7e_86ea_afe42ec03005"
+          },
+          {
+            "control_type": "text",
+            "label": "Column 1",
+            "type": "string",
+            "name": "226272d4_759a_465a_878a_40bfe8fdc12e"
+          },
+          {
+            "control_type": "date_time",
+            "label": "Created at",
+            "render_input": "date_time_conversion",
+            "parse_output": "date_time_conversion",
+            "type": "date_time",
+            "name": "a5612739_5401_4ae7_bd07_782c1a6fb2d1"
+          },
+          {
+            "control_type": "date_time",
+            "label": "Updated at",
+            "render_input": "date_time_conversion",
+            "parse_output": "date_time_conversion",
+            "type": "date_time",
+            "name": "61aae604_a95e_4519_9091_bb0bf754a67f"
+          }
+        ]
+      }
+    ],
+    "block": [
+      {
+        "number": 1,
+        "provider": "py_eval",
+        "name": "invoke_custom_py_code",
+        "as": "format_record",
+        "keyword": "action",
+        "input": {
+          "name": "Format record update",
+          "code": "def main(input):\n    record_id = input['record_id']\n    col1 = input['column_1']\n    upper = col1.upper() if col1 else ''\n    msg = f\"Record {record_id} updated: Column 1 = {col1}\"\n    return {'log_message': msg, 'column_1_upper': upper}\n",
+          "code_input": {
+            "schema": "[{\"name\":\"record_id\",\"type\":\"string\",\"optional\":false,\"control_type\":\"text\",\"label\":\"Record ID\",\"parent\":[\"code_input\",\"data\"]},{\"name\":\"column_1\",\"type\":\"string\",\"optional\":false,\"control_type\":\"text\",\"label\":\"Column 1\",\"parent\":[\"code_input\",\"data\"]}]",
+            "data": {
+              "record_id": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_db_table\",\"line\":\"8b805ead\",\"path\":[\"record\",\"11fbe9a6_a16d_4d7e_86ea_afe42ec03005\"]}')}",
+              "column_1": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_db_table\",\"line\":\"8b805ead\",\"path\":[\"record\",\"226272d4_759a_465a_878a_40bfe8fdc12e\"]}')}"
+            }
+          },
+          "code_output_schema_json": "[{\"name\":\"log_message\",\"type\":\"string\",\"optional\":false,\"control_type\":\"text\",\"label\":\"Log message\"},{\"name\":\"column_1_upper\",\"type\":\"string\",\"optional\":false,\"control_type\":\"text\",\"label\":\"Column 1 upper\"}]"
+        },
+        "extended_input_schema": [
+          {
+            "control_type": "form-schema-builder",
+            "label": "Input fields",
+            "name": "code_input",
+            "optional": true,
+            "override": true,
+            "sticky": true,
+            "type": "object",
+            "properties": [
+              {
+                "control_type": "text",
+                "extends_schema": true,
+                "label": "Schema",
+                "name": "schema",
+                "type": "string"
+              },
+              {
+                "label": "Data",
+                "name": "data",
+                "type": "object",
+                "properties": [
+                  {
+                    "control_type": "text",
+                    "label": "Record ID",
+                    "name": "record_id",
+                    "type": "string",
+                    "optional": false,
+                    "parent": ["code_input", "data"]
+                  },
+                  {
+                    "control_type": "text",
+                    "label": "Column 1",
+                    "name": "column_1",
+                    "type": "string",
+                    "optional": false,
+                    "parent": ["code_input", "data"]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "extended_output_schema": [
+          {
+            "label": "Output",
+            "name": "output",
+            "type": "object",
+            "properties": [
+              {
+                "control_type": "text",
+                "label": "Log message",
+                "name": "log_message",
+                "type": "string"
+              },
+              {
+                "control_type": "text",
+                "label": "Column 1 upper",
+                "name": "column_1_upper",
+                "type": "string"
+              }
+            ]
+          }
+        ],
+        "uuid": "format-record-py-001"
+      }
+    ],
+    "uuid": "228ff9a2-21c6-4106-9b5b-0823bc1eb04a"
+  },
+  "config": [
+    {
+      "keyword": "application",
+      "provider": "workato_db_table",
+      "skip_validation": false,
+      "account_id": null
+    },
+    {
+      "keyword": "application",
+      "provider": "py_eval",
+      "skip_validation": false
+    }
+  ]
+}

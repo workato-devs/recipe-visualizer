@@ -635,4 +635,399 @@ test("datapill: HA recipe error log message shows (formula)", () => {
   );
 });
 
+// ============================================================================
+// Genie skill, stop keyword, and new provider tests
+// ============================================================================
+
+test("genie skill trigger: recognized as genie_skill trigger type with schemas", () => {
+  const recipe = {
+    name: "Genie Skill Test",
+    code: {
+      keyword: "trigger",
+      provider: "workato_genie",
+      name: "start_workflow",
+      as: "trigger",
+      uuid: "trigger-001",
+      input: {
+        description: "Look up a user's manager",
+        input_schema: '[{"name":"user_email","type":"string","label":"User email","optional":false}]',
+        output_schema: '[{"name":"manager_email","type":"string","label":"Manager email"},{"name":"success","type":"boolean","label":"Success"}]',
+      },
+      extended_output_schema: [
+        {
+          label: "Parameters",
+          name: "parameters",
+          type: "object",
+          properties: [
+            { control_type: "text", label: "User email", name: "user_email", type: "string" },
+          ],
+        },
+      ],
+      block: [
+        {
+          keyword: "action",
+          provider: "workato_genie",
+          name: "workflow_return_result",
+          as: "return_success",
+          uuid: "return-001",
+          number: 1,
+          input: {
+            result: { success: "true", manager_email: "mgr@example.com", error: "" },
+          },
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  const triggerNode = graph.nodes.find((n) => n.kind === "trigger");
+  assert(triggerNode !== undefined, "Should have trigger node");
+  assert(triggerNode.ui?.triggerType === "genie_skill", `Expected genie_skill trigger type, got: ${triggerNode.ui?.triggerType}`);
+  assert(triggerNode.ui?.badge === "Genie.start_workflow", `Expected Genie badge, got: ${triggerNode.ui?.badge}`);
+  assert(triggerNode.inputSchema !== undefined, "Genie trigger should have input schema");
+  assert(triggerNode.inputSchema!.length === 1, `Expected 1 input schema field, got ${triggerNode.inputSchema!.length}`);
+  assert(triggerNode.inputSchema![0].name === "user_email", `Expected user_email field, got ${triggerNode.inputSchema![0].name}`);
+  assert(triggerNode.outputSchema !== undefined, "Genie trigger should have output schema");
+  assert(triggerNode.outputSchema!.length === 2, `Expected 2 output schema fields, got ${triggerNode.outputSchema!.length}`);
+});
+
+test("genie skill: workflow_return_result is terminal and connects to ::end", () => {
+  const recipe = {
+    name: "Genie Return Test",
+    code: {
+      keyword: "trigger",
+      provider: "workato_genie",
+      name: "start_workflow",
+      as: "trigger",
+      uuid: "trigger-001",
+      input: {},
+      block: [
+        {
+          keyword: "action",
+          provider: "workato_genie",
+          name: "workflow_return_result",
+          as: "return_success",
+          uuid: "return-001",
+          number: 1,
+          input: { result: { success: "true" } },
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  const returnNode = graph.nodes.find((n) => n.label === "return_success");
+  assert(returnNode !== undefined, "Should have workflow_return_result node");
+  assert(returnNode.ui?.isTerminal === true, "workflow_return_result should be terminal");
+
+  const terminalEdge = graph.edges.find((e) => e.from === returnNode.id && e.to === "::end");
+  assert(terminalEdge !== undefined, "Terminal node should connect to ::end");
+  assert(terminalEdge.kind === "terminal", `Expected terminal edge kind, got: ${terminalEdge.kind}`);
+});
+
+test("genie skill: workflow_return_result extracts result fields as inputs", () => {
+  const recipe = {
+    name: "Genie Inputs Test",
+    code: {
+      keyword: "trigger",
+      provider: "workato_genie",
+      name: "start_workflow",
+      as: "trigger",
+      uuid: "trigger-001",
+      input: {},
+      block: [
+        {
+          keyword: "action",
+          provider: "workato_genie",
+          name: "workflow_return_result",
+          as: "return_error",
+          uuid: "return-err-001",
+          number: 1,
+          input: { result: { success: "false", error: "Not found" } },
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  const returnNode = graph.nodes.find((n) => n.label === "return_error");
+  assert(returnNode !== undefined, "Should have return node");
+  assert(returnNode.step?.inputs !== undefined, "Should have inputs");
+  assert(returnNode.step.inputs["result.success"] === "false", `Expected result.success=false, got: ${returnNode.step.inputs["result.success"]}`);
+  assert(returnNode.step.inputs["result.error"] === "Not found", `Expected result.error='Not found', got: ${returnNode.step.inputs["result.error"]}`);
+});
+
+test("stop keyword: renders as action node, not error node", () => {
+  const recipe = {
+    name: "Stop Test",
+    code: {
+      keyword: "trigger",
+      provider: "test",
+      name: "test",
+      uuid: "trigger-001",
+      block: [
+        {
+          keyword: "stop",
+          uuid: "stop-001",
+          number: 1,
+          input: { stop_with_error: "false" },
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  const errorNodes = graph.nodes.filter((n) => n.kind === "error");
+  assert(errorNodes.length === 0, `Expected no error nodes, got ${errorNodes.length}`);
+
+  const stopNode = graph.nodes.find((n) => n.id === "stop-001");
+  assert(stopNode !== undefined, "Should have stop node");
+  assert(stopNode.kind === "action", `Expected action kind, got: ${stopNode.kind}`);
+  assert(stopNode.ui?.isTerminal === true, "stop should be terminal");
+});
+
+test("stop keyword: connects to ::end as terminal", () => {
+  const recipe = {
+    name: "Stop Terminal Test",
+    code: {
+      keyword: "trigger",
+      provider: "test",
+      name: "test",
+      uuid: "trigger-001",
+      block: [
+        {
+          keyword: "stop",
+          uuid: "stop-001",
+          number: 1,
+          input: { stop_with_error: "false" },
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  const terminalEdge = graph.edges.find((e) => e.from === "stop-001" && e.to === "::end");
+  assert(terminalEdge !== undefined, "stop node should connect to ::end");
+  assert(terminalEdge.kind === "terminal", `Expected terminal edge kind, got: ${terminalEdge.kind}`);
+});
+
+test("provider display names: new providers render correctly", () => {
+  const recipe = {
+    name: "Provider Names Test",
+    code: {
+      keyword: "trigger",
+      provider: "workato_db_table",
+      name: "new_record_v2",
+      as: "new_row",
+      uuid: "trigger-001",
+      block: [
+        {
+          keyword: "action",
+          provider: "py_eval",
+          name: "invoke_custom_py_code",
+          as: "extract_data",
+          uuid: "py-001",
+          number: 1,
+        },
+        {
+          keyword: "action",
+          provider: "workato_variable",
+          name: "update_variables",
+          as: "set_var",
+          uuid: "var-001",
+          number: 2,
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  const triggerNode = graph.nodes.find((n) => n.kind === "trigger");
+  assert(triggerNode !== undefined, "Should have trigger node");
+  assert(triggerNode.ui?.badge === "Data Table.new_record_v2", `Expected 'Data Table.new_record_v2', got: ${triggerNode.ui?.badge}`);
+
+  const pyNode = graph.nodes.find((n) => n.label === "extract_data");
+  assert(pyNode !== undefined, "Should have py_eval node");
+  assert(pyNode.ui?.badge === "Python", `Expected 'Python' badge, got: ${pyNode.ui?.badge}`);
+
+  const varNode = graph.nodes.find((n) => n.label === "set_var");
+  assert(varNode !== undefined, "Should have variable node");
+  assert(varNode.ui?.badge === "Variable", `Expected 'Variable' badge, got: ${varNode.ui?.badge}`);
+});
+
+// ============================================================================
+// Golden fixture: API endpoint with stop
+// ============================================================================
+
+test("golden_api_endpoint_with_stop: transforms without errors", () => {
+  const recipe = loadFixture("golden_api_endpoint_with_stop.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const errorNodes = graph.nodes.filter((n) => n.kind === "error");
+  assert(errorNodes.length === 0, `Expected no error nodes, got ${errorNodes.length}: ${errorNodes.map(n => n.label).join(", ")}`);
+});
+
+test("golden_api_endpoint_with_stop: graceful stop has label 'Stop' and stopWithError=false", () => {
+  const recipe = loadFixture("golden_api_endpoint_with_stop.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const stopNode = graph.nodes.find((n) => n.id === "stop-missing-input-008");
+  assert(stopNode !== undefined, "Should have graceful stop node");
+  assert(stopNode.label === "Stop", `Expected label 'Stop', got: '${stopNode.label}'`);
+  assert(stopNode.ui?.stopWithError === false, `Expected stopWithError=false, got: ${stopNode.ui?.stopWithError}`);
+  assert(stopNode.ui?.stopReason === "Request ID was not provided", `Expected stopReason, got: '${stopNode.ui?.stopReason}'`);
+});
+
+test("golden_api_endpoint_with_stop: error stop has stopWithError=true", () => {
+  const recipe = loadFixture("golden_api_endpoint_with_stop.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const stopNode = graph.nodes.find((n) => n.id === "stop-bad-status-006");
+  assert(stopNode !== undefined, "Should have error stop node");
+  assert(stopNode.label === "Stop", `Expected label 'Stop', got: '${stopNode.label}'`);
+  assert(stopNode.ui?.stopWithError === true, `Expected stopWithError=true, got: ${stopNode.ui?.stopWithError}`);
+  assert(stopNode.ui?.stopReason === "Processing failed — unexpected status from py_eval", `Expected stopReason, got: '${stopNode.ui?.stopReason}'`);
+});
+
+test("golden_api_endpoint_with_stop: both stop nodes are terminal connected to ::end", () => {
+  const recipe = loadFixture("golden_api_endpoint_with_stop.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const gracefulEdge = graph.edges.find((e) => e.from === "stop-missing-input-008" && e.to === "::end");
+  assert(gracefulEdge !== undefined, "graceful stop should connect to ::end");
+  assert(gracefulEdge.kind === "terminal", `Expected terminal edge kind, got: ${gracefulEdge.kind}`);
+
+  const errorEdge = graph.edges.find((e) => e.from === "stop-bad-status-006" && e.to === "::end");
+  assert(errorEdge !== undefined, "error stop should connect to ::end");
+  assert(errorEdge.kind === "terminal", `Expected terminal edge kind, got: ${errorEdge.kind}`);
+});
+
+// ============================================================================
+// Golden fixture: Data table trigger
+// ============================================================================
+
+test("golden_data_table_trigger: transforms without errors", () => {
+  const recipe = loadFixture("golden_data_table_trigger.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const errorNodes = graph.nodes.filter((n) => n.kind === "error");
+  assert(errorNodes.length === 0, `Expected no error nodes, got ${errorNodes.length}: ${errorNodes.map(n => n.label).join(", ")}`);
+});
+
+test("golden_data_table_trigger: trigger node has correct provider badge and type", () => {
+  const recipe = loadFixture("golden_data_table_trigger.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const triggerNode = graph.nodes.find((n) => n.kind === "trigger");
+  assert(triggerNode !== undefined, "Should have trigger node");
+  assert(triggerNode.ui?.badge === "Data Table.updated_records_realtime", `Expected 'Data Table.updated_records_realtime', got: '${triggerNode.ui?.badge}'`);
+  assert(triggerNode.ui?.triggerType === "data_table", `Expected trigger type 'data_table', got: '${triggerNode.ui?.triggerType}'`);
+});
+
+// ============================================================================
+// Stop metadata: stop_with_error=true
+// ============================================================================
+
+test("stop keyword: stopWithError=true is captured", () => {
+  const recipe = {
+    name: "Stop Error Test",
+    code: {
+      keyword: "trigger",
+      provider: "test",
+      name: "test",
+      uuid: "trigger-001",
+      block: [
+        {
+          keyword: "stop",
+          uuid: "stop-001",
+          number: 1,
+          input: { stop_with_error: "true", stop_reason: "Something went wrong" },
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+  const stopNode = graph.nodes.find((n) => n.id === "stop-001");
+  assert(stopNode !== undefined, "Should have stop node");
+  assert(stopNode.ui?.stopWithError === true, `Expected stopWithError=true, got: ${stopNode.ui?.stopWithError}`);
+  assert(stopNode.ui?.stopReason === "Something went wrong", `Expected stopReason, got: '${stopNode.ui?.stopReason}'`);
+  assert(stopNode.label === "Stop", `Expected label 'Stop', got: '${stopNode.label}'`);
+});
+
+test("stop keyword: label uses step.as when present", () => {
+  const recipe = {
+    name: "Stop With Alias",
+    code: {
+      keyword: "trigger",
+      provider: "test",
+      name: "test",
+      uuid: "trigger-001",
+      block: [
+        {
+          keyword: "stop",
+          as: "halt_processing",
+          uuid: "stop-001",
+          number: 1,
+          input: { stop_with_error: "false" },
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+  const stopNode = graph.nodes.find((n) => n.id === "stop-001");
+  assert(stopNode !== undefined, "Should have stop node");
+  assert(stopNode.label === "halt_processing", `Expected label 'halt_processing', got: '${stopNode.label}'`);
+});
+
+// ============================================================================
+// Golden fixture: Message topic subscriber
+// ============================================================================
+
+test("golden_msg_topic_subscriber: transforms without errors", () => {
+  const recipe = loadFixture("golden_msg_topic_subscriber.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const errorNodes = graph.nodes.filter((n) => n.kind === "error");
+  assert(errorNodes.length === 0, `Expected no error nodes, got ${errorNodes.length}: ${errorNodes.map(n => n.label).join(", ")}`);
+});
+
+test("golden_msg_topic_subscriber: trigger is event_streams type with correct badge", () => {
+  const recipe = loadFixture("golden_msg_topic_subscriber.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const triggerNode = graph.nodes.find((n) => n.kind === "trigger");
+  assert(triggerNode !== undefined, "Should have trigger node");
+  assert(triggerNode.ui?.triggerType === "event_streams", `Expected trigger type 'event_streams', got: '${triggerNode.ui?.triggerType}'`);
+  assert(triggerNode.ui?.badge === "Event Streams.subscribe_to_topic", `Expected 'Event Streams.subscribe_to_topic', got: '${triggerNode.ui?.badge}'`);
+});
+
+// ============================================================================
+// Golden fixture: Message topic publisher
+// ============================================================================
+
+test("golden_msg_topic_publisher: transforms without errors", () => {
+  const recipe = loadFixture("golden_msg_topic_publisher.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const errorNodes = graph.nodes.filter((n) => n.kind === "error");
+  assert(errorNodes.length === 0, `Expected no error nodes, got ${errorNodes.length}: ${errorNodes.map(n => n.label).join(", ")}`);
+});
+
+test("golden_msg_topic_publisher: publish action has Event Streams badge", () => {
+  const recipe = loadFixture("golden_msg_topic_publisher.recipe.json");
+  const graph = buildIgm(recipe);
+
+  const publishNode = graph.nodes.find((n) => n.id === "publish-event-001");
+  assert(publishNode !== undefined, "Should have publish action node");
+  assert(publishNode.ui?.badge === "Event Streams", `Expected 'Event Streams' badge, got: '${publishNode.ui?.badge}'`);
+});
+
 console.log("\n=== All tests complete ===\n");

@@ -181,8 +181,22 @@ ActionNode.displayName = "ActionNode";
 // ============================================================================
 // TERMINAL NODE - Return/response, shows HTTP status prominently
 // ============================================================================
+
+const STOP_ERROR_COLOR = "#ef4444";
+const STOP_GRACEFUL_COLOR = "#64748b";
+
+function getStopStyle(ui?: NodeUi): { color: string; badgeLabel: string } | null {
+  if (ui?.stopWithError !== undefined) {
+    return ui.stopWithError
+      ? { color: STOP_ERROR_COLOR, badgeLabel: "ERROR" }
+      : { color: STOP_GRACEFUL_COLOR, badgeLabel: "STOP" };
+  }
+  return null;
+}
+
 export const TerminalNode = memo(({ data, selected }: CustomNodeProps) => {
-  const statusColor = getStatusColor(data.ui?.httpStatus);
+  const stopStyle = getStopStyle(data.ui);
+  const borderColor = stopStyle ? stopStyle.color : getStatusColor(data.ui?.httpStatus);
 
   return (
     <div
@@ -190,12 +204,12 @@ export const TerminalNode = memo(({ data, selected }: CustomNodeProps) => {
         position: "relative",
         padding: "12px 16px",
         borderRadius: 8,
-        border: `3px solid ${selected ? "#3b82f6" : statusColor}`,
+        border: `3px solid ${selected ? "#3b82f6" : borderColor}`,
         background: "#1e293b",
         minWidth: 180,
         boxShadow: selected
           ? "0 0 0 2px rgba(59, 130, 246, 0.3)"
-          : `0 2px 8px ${statusColor}26, 0 2px 4px rgba(0,0,0,0.2)`,
+          : `0 2px 8px ${borderColor}26, 0 2px 4px rgba(0,0,0,0.2)`,
         transition: "border-color 0.15s ease, box-shadow 0.15s ease",
       }}
     >
@@ -203,13 +217,13 @@ export const TerminalNode = memo(({ data, selected }: CustomNodeProps) => {
       <Handle type="target" position={getTargetPosition(data.layoutDirection)} style={handleStyle} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {/* HTTP status badge */}
-        {data.ui?.httpStatus && (
+        {/* HTTP status badge (non-stop terminals) */}
+        {!stopStyle && data.ui?.httpStatus && (
           <div
             style={{
               padding: "3px 10px",
               borderRadius: 4,
-              background: statusColor,
+              background: borderColor,
               color: "#fff",
               fontSize: 12,
               fontWeight: 700,
@@ -217,6 +231,24 @@ export const TerminalNode = memo(({ data, selected }: CustomNodeProps) => {
             }}
           >
             {data.ui.httpStatus}
+          </div>
+        )}
+
+        {/* Stop badge */}
+        {stopStyle && (
+          <div
+            style={{
+              padding: "3px 10px",
+              borderRadius: 4,
+              background: stopStyle.color,
+              color: "#fff",
+              fontSize: 11,
+              fontWeight: 700,
+              fontFamily: "var(--vscode-editor-font-family, monospace)",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {stopStyle.badgeLabel}
           </div>
         )}
 
@@ -229,6 +261,19 @@ export const TerminalNode = memo(({ data, selected }: CustomNodeProps) => {
           )}
         </div>
       </div>
+
+      {/* Stop reason */}
+      {data.ui?.stopReason && (
+        <div style={{
+          fontSize: 11,
+          color: "#94a3b8",
+          marginTop: 6,
+          fontStyle: "italic",
+          lineHeight: 1.3,
+        }}>
+          {data.ui.stopReason}
+        </div>
+      )}
 
       <Handle type="source" position={getSourcePosition(data.layoutDirection)} style={handleStyle} />
     </div>

@@ -89,6 +89,9 @@ export interface SchemaField {
 export type TriggerType =
   | "api_endpoint"
   | "callable"
+  | "genie_skill"
+  | "data_table"
+  | "event_streams"
   | "webhook"
   | "scheduler"
   | "polling"
@@ -135,6 +138,12 @@ export interface NodeUi {
   /** Schema presence flags */
   hasInputSchema?: boolean;
   hasOutputSchema?: boolean;
+
+  /** Stop block: whether stop_with_error is true */
+  stopWithError?: boolean;
+
+  /** Stop block: reason text from stop_reason input */
+  stopReason?: string;
 
   /** Foreach loop source expression (datapill) */
   loopSource?: string;

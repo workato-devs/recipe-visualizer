@@ -40,6 +40,21 @@ function getTriggerType(step: any): TriggerType {
     return "callable";
   }
 
+  // Genie skill triggers
+  if (provider === "workato_genie" && name === "start_workflow") {
+    return "genie_skill";
+  }
+
+  // Data table triggers
+  if (provider === "workato_db_table") {
+    return "data_table";
+  }
+
+  // Event Streams (pub/sub) triggers
+  if (provider === "workato_pub_sub") {
+    return "event_streams";
+  }
+
   // Webhook triggers
   if (provider === "workato_webhook" || name.includes("webhook")) {
     return "webhook";
@@ -136,12 +151,21 @@ function isCallableTrigger(step: any): boolean {
 }
 
 /**
+ * Check if a trigger is a genie skill trigger (input_schema / output_schema on input)
+ */
+function isGenieSkillTrigger(step: any): boolean {
+  return step.provider === "workato_genie" && step.name === "start_workflow";
+}
+
+/**
  * Check if step is an explicit terminal (return_response or return_result)
  */
 function isExplicitTerminal(step: any): boolean {
   return (
     (step.provider === "workato_api_platform" && step.name === "return_response") ||
-    (step.provider === "workato_recipe_function" && step.name === "return_result")
+    (step.provider === "workato_recipe_function" && step.name === "return_result") ||
+    (step.provider === "workato_genie" && step.name === "workflow_return_result") ||
+    step.keyword === "stop"
   );
 }
 
@@ -155,14 +179,19 @@ function isRecipeCall(step: any): boolean {
 /**
  * Get display name for a provider
  */
-function getProviderDisplayName(provider: string | undefined): string | undefined {
+export function getProviderDisplayName(provider: string | undefined): string | undefined {
   if (!provider) return undefined;
 
   const KNOWN: Record<string, string> = {
     // Workato platform
     workato_api_platform: "API Platform",
     workato_recipe_function: "Recipe Function",
+    workato_genie: "Genie",
+    workato_db_table: "Data Table",
+    workato_pub_sub: "Event Streams",
+    workato_variable: "Variable",
     workato_webhook: "Webhook",
+    py_eval: "Python",
     clock: "Scheduler",
     logger: "Logger",
 
@@ -176,7 +205,7 @@ function getProviderDisplayName(provider: string | undefined): string | undefine
 
     // Communication & Collaboration
     slack: "Slack",
-    slack_bot: "Slack Bot",
+    slack_bot: "Slack",
     microsoft_teams: "Microsoft Teams",
     gmail: "Gmail",
     outlook: "Outlook",
@@ -348,8 +377,8 @@ function extractStepInputs(input: any): Record<string, string> | undefined {
     // Skip schema JSON fields (handled separately for callable recipes)
     if (key.endsWith("_schema_json")) continue;
 
-    // Handle response body object specially (for return_response actions)
-    if (key === "response" && typeof value === "object" && value !== null) {
+    // Handle response/result body objects specially (return_response / workflow_return_result)
+    if ((key === "response" || key === "result") && typeof value === "object" && value !== null) {
       for (const [respKey, respValue] of Object.entries(value)) {
         if (count >= maxInputs) break;
         if (respKey.startsWith("_")) continue;
@@ -357,7 +386,7 @@ function extractStepInputs(input: any): Record<string, string> | undefined {
         // Skip complex nested objects but show simple values
         if (typeof respValue === "object" && respValue !== null) continue;
 
-        result[`response.${respKey}`] = simplifyValue(respValue);
+        result[`${key}.${respKey}`] = simplifyValue(respValue);
         count++;
       }
       continue;
@@ -414,6 +443,9 @@ function createTriggerNode(step: any, jsonPointer: string, config?: any[]): IgmN
   if (isCallableTrigger(step) && step.input) {
     inputSchema = parseJsonSchemaString(step.input.parameters_schema_json);
     outputSchema = parseJsonSchemaString(step.input.result_schema_json);
+  } else if (isGenieSkillTrigger(step) && step.input) {
+    inputSchema = parseJsonSchemaString(step.input.input_schema);
+    outputSchema = parseJsonSchemaString(step.input.output_schema);
   }
 
   // Fall back to extended_output_schema if no result schema from JSON
@@ -459,6 +491,8 @@ function createActionNode(step: any, jsonPointer: string, config?: any[]): IgmNo
   const inputs = extractStepInputs(step.input);
   const recipeCall = isRecipeCall(step);
 
+  const isStop = step.keyword === "stop";
+
   // Build UI metadata
   const ui: NodeUi = {
     badge: getProviderDisplayName(step.provider),
@@ -467,6 +501,8 @@ function createActionNode(step: any, jsonPointer: string, config?: any[]): IgmNo
     isRecipeCall: recipeCall,
     hasInputSchema: !!inputSchema?.length,
     hasOutputSchema: !!outputSchema?.length,
+    stopWithError: isStop ? step.input?.stop_with_error === "true" : undefined,
+    stopReason: isStop ? step.input?.stop_reason : undefined,
   };
 
   // Extract recipe reference for drill-down when it's a recipe call
@@ -482,7 +518,7 @@ function createActionNode(step: any, jsonPointer: string, config?: any[]): IgmNo
   return {
     id,
     kind: "action",
-    label: step.as ?? step.name ?? `action${step.number ? " " + step.number : ""}`,
+    label: step.as ?? step.name ?? (isStop ? "Stop" : `action${step.number ? " " + step.number : ""}`),
     source: { jsonPointer },
     step: {
       keyword: step.keyword ?? "action",
@@ -730,6 +766,7 @@ function processStep(step: any, jsonPointer: string, ctx: BuildContext): Travers
       case "trigger":
         return processTrigger(step, jsonPointer, ctx);
       case "action":
+      case "stop":
         return processAction(step, jsonPointer, ctx);
       case "if":
         return processIf(step, jsonPointer, ctx);
