@@ -1,0 +1,229 @@
+{
+  "code": {
+    "as": "trigger",
+    "block": [
+      {
+        "as": "publish_event",
+        "extended_input_schema": [
+          {
+            "label": "Message",
+            "name": "message",
+            "properties": [
+              {
+                "control_type": "text",
+                "label": "Event type",
+                "name": "event_type",
+                "optional": false,
+                "type": "string"
+              },
+              {
+                "control_type": "text",
+                "label": "Payload",
+                "name": "payload",
+                "optional": true,
+                "type": "string"
+              },
+              {
+                "control_type": "text",
+                "label": "Timestamp",
+                "name": "timestamp",
+                "optional": true,
+                "type": "string"
+              }
+            ],
+            "type": "object"
+          }
+        ],
+        "input": {
+          "message": {
+            "event_type": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"trigger\",\"path\":[\"request\",\"event_type\"]}')}",
+            "payload": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"trigger\",\"path\":[\"request\",\"payload\"]}')}",
+            "timestamp": "=now"
+          },
+          "topic_id": {
+            "folder": "",
+            "name": "golden-test-topic",
+            "zip_name": "golden_test_topic.topic.json"
+          }
+        },
+        "keyword": "action",
+        "name": "publish_to_topic",
+        "number": 1,
+        "provider": "workato_pub_sub",
+        "uuid": "publish-event-001"
+      },
+      {
+        "as": "return_200",
+        "extended_input_schema": [
+          {
+            "change_on_blur": true,
+            "control_type": "select",
+            "extends_schema": true,
+            "label": "Response",
+            "name": "http_status_code",
+            "pick_list": [
+              [
+                "Success",
+                "200"
+              ]
+            ],
+            "type": "string"
+          },
+          {
+            "label": "Response body",
+            "name": "response",
+            "properties": [
+              {
+                "control_type": "checkbox",
+                "label": "Success",
+                "name": "success",
+                "optional": true,
+                "parse_output": "boolean_conversion",
+                "render_input": "boolean_conversion",
+                "toggle_field": {
+                  "control_type": "text",
+                  "label": "Success",
+                  "name": "success",
+                  "toggle_hint": "Use custom value",
+                  "type": "boolean"
+                },
+                "toggle_hint": "Select from option list",
+                "type": "boolean"
+              },
+              {
+                "control_type": "text",
+                "label": "Message",
+                "name": "message",
+                "optional": true,
+                "type": "string"
+              }
+            ],
+            "type": "object"
+          }
+        ],
+        "extended_output_schema": [
+          {
+            "change_on_blur": true,
+            "control_type": "select",
+            "extends_schema": true,
+            "label": "Response",
+            "name": "http_status_code",
+            "pick_list": [
+              [
+                "Success",
+                "200"
+              ]
+            ],
+            "type": "string"
+          },
+          {
+            "label": "Response body",
+            "name": "response",
+            "properties": [
+              {
+                "control_type": "checkbox",
+                "label": "Success",
+                "name": "success",
+                "optional": true,
+                "parse_output": "boolean_conversion",
+                "render_input": "boolean_conversion",
+                "toggle_field": {
+                  "control_type": "text",
+                  "label": "Success",
+                  "name": "success",
+                  "toggle_hint": "Use custom value",
+                  "type": "boolean"
+                },
+                "toggle_hint": "Select from option list",
+                "type": "boolean"
+              },
+              {
+                "control_type": "text",
+                "label": "Message",
+                "name": "message",
+                "optional": true,
+                "type": "string"
+              }
+            ],
+            "type": "object"
+          }
+        ],
+        "input": {
+          "http_status_code": "200",
+          "response": {
+            "message": "Published to topic 1121",
+            "success": "true"
+          }
+        },
+        "keyword": "action",
+        "name": "return_response",
+        "number": 2,
+        "provider": "workato_api_platform",
+        "uuid": "return-200-001"
+      }
+    ],
+    "extended_output_schema": [
+      {
+        "label": "Request",
+        "name": "request",
+        "properties": [
+          {
+            "control_type": "text",
+            "label": "Event type",
+            "name": "event_type",
+            "optional": false,
+            "type": "string"
+          },
+          {
+            "control_type": "text",
+            "label": "Payload",
+            "name": "payload",
+            "optional": true,
+            "type": "string"
+          }
+        ],
+        "type": "object"
+      }
+    ],
+    "format_version": 2,
+    "input": {
+      "request": {
+        "content_type": "json",
+        "schema": "[{\"name\":\"event_type\",\"type\":\"string\",\"optional\":false,\"control_type\":\"text\",\"label\":\"Event type\"},{\"name\":\"payload\",\"type\":\"string\",\"optional\":true,\"control_type\":\"text\",\"label\":\"Payload\"}]"
+      },
+      "response": {
+        "content_type": "json",
+        "responses": [
+          {
+            "body_schema": "[{\"name\":\"success\",\"type\":\"boolean\",\"optional\":true,\"control_type\":\"checkbox\",\"label\":\"Success\"},{\"name\":\"message\",\"type\":\"string\",\"optional\":true,\"control_type\":\"text\",\"label\":\"Message\"}]",
+            "http_status_code": "200",
+            "name": "Success"
+          }
+        ]
+      }
+    },
+    "keyword": "trigger",
+    "name": "receive_request",
+    "number": 0,
+    "provider": "workato_api_platform",
+    "uuid": "trigger-pub-001"
+  },
+  "concurrency": 1,
+  "config": [
+    {
+      "account_id": null,
+      "keyword": "application",
+      "provider": "workato_api_platform",
+      "skip_validation": false
+    },
+    {
+      "account_id": null,
+      "keyword": "application",
+      "provider": "workato_pub_sub",
+      "skip_validation": false
+    }
+  ],
+  "name": "Golden Msg Topic Publisher",
+  "private": false,
+  "version": 1
+}

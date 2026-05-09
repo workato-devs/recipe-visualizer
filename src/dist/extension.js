@@ -49,6 +49,15 @@ function getTriggerType(step) {
   if (provider === "workato_recipe_function" && name === "execute") {
     return "callable";
   }
+  if (provider === "workato_genie" && name === "start_workflow") {
+    return "genie_skill";
+  }
+  if (provider === "workato_db_table") {
+    return "data_table";
+  }
+  if (provider === "workato_pub_sub") {
+    return "event_streams";
+  }
   if (provider === "workato_webhook" || name.includes("webhook")) {
     return "webhook";
   }
@@ -102,8 +111,11 @@ function parseJsonSchemaString(jsonString) {
 function isCallableTrigger(step) {
   return step.provider === "workato_recipe_function" && step.name === "execute";
 }
+function isGenieSkillTrigger(step) {
+  return step.provider === "workato_genie" && step.name === "start_workflow";
+}
 function isExplicitTerminal(step) {
-  return step.provider === "workato_api_platform" && step.name === "return_response" || step.provider === "workato_recipe_function" && step.name === "return_result";
+  return step.provider === "workato_api_platform" && step.name === "return_response" || step.provider === "workato_recipe_function" && step.name === "return_result" || step.provider === "workato_genie" && step.name === "workflow_return_result" || step.keyword === "stop";
 }
 function isRecipeCall(step) {
   return step.provider === "workato_recipe_function" && step.name === "call_recipe";
@@ -115,7 +127,12 @@ function getProviderDisplayName(provider) {
     // Workato platform
     workato_api_platform: "API Platform",
     workato_recipe_function: "Recipe Function",
+    workato_genie: "Genie",
+    workato_db_table: "Data Table",
+    workato_pub_sub: "Event Streams",
+    workato_variable: "Variable",
     workato_webhook: "Webhook",
+    py_eval: "Python",
     clock: "Scheduler",
     logger: "Logger",
     // CRM & Sales
@@ -127,7 +144,7 @@ function getProviderDisplayName(provider) {
     pipedrive: "Pipedrive",
     // Communication & Collaboration
     slack: "Slack",
-    slack_bot: "Slack Bot",
+    slack_bot: "Slack",
     microsoft_teams: "Microsoft Teams",
     gmail: "Gmail",
     outlook: "Outlook",
@@ -243,7 +260,7 @@ function extractStepInputs(input) {
       continue;
     if (key.endsWith("_schema_json"))
       continue;
-    if (key === "response" && typeof value === "object" && value !== null) {
+    if ((key === "response" || key === "result") && typeof value === "object" && value !== null) {
       for (const [respKey, respValue] of Object.entries(value)) {
         if (count >= maxInputs)
           break;
@@ -251,7 +268,7 @@ function extractStepInputs(input) {
           continue;
         if (typeof respValue === "object" && respValue !== null)
           continue;
-        result[`response.${respKey}`] = simplifyValue(respValue);
+        result[`${key}.${respKey}`] = simplifyValue(respValue);
         count++;
       }
       continue;
@@ -278,6 +295,9 @@ function createTriggerNode(step, jsonPointer, config) {
   if (isCallableTrigger(step) && step.input) {
     inputSchema = parseJsonSchemaString(step.input.parameters_schema_json);
     outputSchema = parseJsonSchemaString(step.input.result_schema_json);
+  } else if (isGenieSkillTrigger(step) && step.input) {
+    inputSchema = parseJsonSchemaString(step.input.input_schema);
+    outputSchema = parseJsonSchemaString(step.input.output_schema);
   }
   if (!outputSchema) {
     outputSchema = extractSchemaFields(step.extended_output_schema);
@@ -315,13 +335,16 @@ function createActionNode(step, jsonPointer, config) {
   const connectionName = getConnectionName(config, step.provider);
   const inputs = extractStepInputs(step.input);
   const recipeCall = isRecipeCall(step);
+  const isStop = step.keyword === "stop";
   const ui = {
     badge: getProviderDisplayName(step.provider),
     isTerminal,
     httpStatus: isTerminal ? step.input?.http_status_code : void 0,
     isRecipeCall: recipeCall,
     hasInputSchema: !!inputSchema?.length,
-    hasOutputSchema: !!outputSchema?.length
+    hasOutputSchema: !!outputSchema?.length,
+    stopWithError: isStop ? step.input?.stop_with_error === "true" : void 0,
+    stopReason: isStop ? step.input?.stop_reason : void 0
   };
   if (recipeCall && step.input?.flow_id) {
     const flowId = step.input.flow_id;
@@ -334,7 +357,7 @@ function createActionNode(step, jsonPointer, config) {
   return {
     id,
     kind: "action",
-    label: step.as ?? step.name ?? `action${step.number ? " " + step.number : ""}`,
+    label: step.as ?? step.name ?? (isStop ? "Stop" : `action${step.number ? " " + step.number : ""}`),
     source: { jsonPointer },
     step: {
       keyword: step.keyword ?? "action",
@@ -523,6 +546,7 @@ function processStep(step, jsonPointer, ctx) {
       case "trigger":
         return processTrigger(step, jsonPointer, ctx);
       case "action":
+      case "stop":
         return processAction(step, jsonPointer, ctx);
       case "if":
         return processIf(step, jsonPointer, ctx);

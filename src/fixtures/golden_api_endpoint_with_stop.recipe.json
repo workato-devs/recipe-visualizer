@@ -1,0 +1,495 @@
+{
+  "code": {
+    "as": "api_trigger",
+    "block": [
+      {
+        "as": "validate_input",
+        "block": [
+          {
+            "as": "process_request",
+            "extended_input_schema": [
+              {
+                "control_type": "form-schema-builder",
+                "hint": "Define the input fields that will be passed to your Python code",
+                "label": "Input fields",
+                "name": "code_input",
+                "optional": true,
+                "override": true,
+                "properties": [
+                  {
+                    "control_type": "text",
+                    "extends_schema": true,
+                    "label": "Schema",
+                    "name": "schema",
+                    "type": "string"
+                  },
+                  {
+                    "label": "Data",
+                    "name": "data",
+                    "properties": [
+                      {
+                        "control_type": "text",
+                        "label": "Request ID",
+                        "name": "request_id",
+                        "optional": false,
+                        "parent": [
+                          "code_input",
+                          "data"
+                        ],
+                        "type": "string"
+                      }
+                    ],
+                    "type": "object"
+                  }
+                ],
+                "sticky": true,
+                "type": "object"
+              }
+            ],
+            "extended_output_schema": [
+              {
+                "label": "Output",
+                "name": "output",
+                "properties": [
+                  {
+                    "control_type": "text",
+                    "label": "Status",
+                    "name": "status",
+                    "type": "string"
+                  },
+                  {
+                    "control_type": "text",
+                    "label": "Request ID",
+                    "name": "request_id",
+                    "type": "string"
+                  }
+                ],
+                "type": "object"
+              }
+            ],
+            "input": {
+              "code": "def main(input):\n    return {'status': 'processed', 'request_id': input['request_id']}\n",
+              "code_input": {
+                "data": {
+                  "request_id": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"api_trigger\",\"path\":[\"request\",\"request_id\"]}')}"
+                },
+                "schema": "[{\"name\":\"request_id\",\"type\":\"string\",\"optional\":false,\"control_type\":\"text\",\"label\":\"Request ID\",\"parent\":[\"code_input\",\"data\"]}]"
+              },
+              "code_output_schema_json": "[{\"name\":\"status\",\"type\":\"string\"},{\"name\":\"request_id\",\"type\":\"string\"}]",
+              "name": "Process request"
+            },
+            "keyword": "action",
+            "name": "invoke_custom_py_code",
+            "number": 2,
+            "provider": "py_eval",
+            "uuid": "py-eval-process-002"
+          },
+          {
+            "as": "check_status",
+            "block": [
+              {
+                "as": "return_success",
+                "extended_input_schema": [
+                  {
+                    "change_on_blur": true,
+                    "control_type": "select",
+                    "extends_schema": true,
+                    "label": "Response",
+                    "name": "http_status_code",
+                    "pick_list": [
+                      ["Success", "200"],
+                      ["Error", "400"]
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "label": "Response body",
+                    "name": "response",
+                    "properties": [
+                      {
+                        "control_type": "text",
+                        "label": "Status",
+                        "name": "status",
+                        "optional": true,
+                        "type": "string"
+                      },
+                      {
+                        "control_type": "text",
+                        "label": "Request ID",
+                        "name": "request_id",
+                        "optional": true,
+                        "type": "string"
+                      }
+                    ],
+                    "type": "object"
+                  }
+                ],
+                "extended_output_schema": [
+                  {
+                    "change_on_blur": true,
+                    "control_type": "select",
+                    "extends_schema": true,
+                    "label": "Response",
+                    "name": "http_status_code",
+                    "pick_list": [
+                      ["Success", "200"],
+                      ["Error", "400"]
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "label": "Response body",
+                    "name": "response",
+                    "properties": [
+                      {
+                        "control_type": "text",
+                        "label": "Status",
+                        "name": "status",
+                        "optional": true,
+                        "type": "string"
+                      },
+                      {
+                        "control_type": "text",
+                        "label": "Request ID",
+                        "name": "request_id",
+                        "optional": true,
+                        "type": "string"
+                      }
+                    ],
+                    "type": "object"
+                  }
+                ],
+                "input": {
+                  "http_status_code": "200",
+                  "response": {
+                    "request_id": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"py_eval\",\"line\":\"process_request\",\"path\":[\"output\",\"request_id\"]}')}",
+                    "status": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"py_eval\",\"line\":\"process_request\",\"path\":[\"output\",\"status\"]}')}"
+                  }
+                },
+                "keyword": "action",
+                "name": "return_response",
+                "number": 4,
+                "provider": "workato_api_platform",
+                "uuid": "return-success-004"
+              },
+              {
+                "block": [
+                  {
+                    "input": {
+                      "stop_reason": "Processing failed — unexpected status from py_eval",
+                      "stop_with_error": "true"
+                    },
+                    "keyword": "stop",
+                    "number": 6,
+                    "uuid": "stop-bad-status-006"
+                  }
+                ],
+                "input": {},
+                "keyword": "else",
+                "number": 5,
+                "uuid": "else-bad-status-005"
+              }
+            ],
+            "input": {
+              "conditions": [
+                {
+                  "lhs": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"py_eval\",\"line\":\"process_request\",\"path\":[\"output\",\"status\"]}')}",
+                  "operand": "equals",
+                  "rhs": "processed",
+                  "uuid": "condition-status-processed"
+                }
+              ],
+              "operand": "and",
+              "type": "compound"
+            },
+            "keyword": "if",
+            "number": 3,
+            "uuid": "if-check-status-003"
+          },
+          {
+            "block": [
+              {
+                "input": {
+                  "stop_reason": "Request ID was not provided",
+                  "stop_with_error": "false"
+                },
+                "keyword": "stop",
+                "number": 8,
+                "uuid": "stop-missing-input-008"
+              }
+            ],
+            "input": {},
+            "keyword": "else",
+            "number": 7,
+            "uuid": "else-missing-input-007"
+          }
+        ],
+        "input": {
+          "conditions": [
+            {
+              "lhs": "#{_dp('{\"pill_type\":\"output\",\"provider\":\"workato_api_platform\",\"line\":\"api_trigger\",\"path\":[\"request\",\"request_id\"]}')}",
+              "operand": "present",
+              "uuid": "condition-request-id-present"
+            }
+          ],
+          "operand": "and",
+          "type": "compound"
+        },
+        "keyword": "if",
+        "number": 1,
+        "uuid": "if-validate-001"
+      }
+    ],
+    "extended_output_schema": [
+      {
+        "label": "Context",
+        "name": "context",
+        "properties": [
+          {
+            "control_type": "text",
+            "label": "Calling IP address",
+            "name": "calling_ip",
+            "optional": true,
+            "type": "string"
+          },
+          {
+            "label": "Access profile",
+            "name": "access_profile",
+            "properties": [
+              {
+                "control_type": "integer",
+                "label": "Access profile ID",
+                "name": "id",
+                "optional": true,
+                "parse_output": "integer_conversion",
+                "type": "integer"
+              },
+              {
+                "control_type": "text",
+                "label": "Access profile name",
+                "name": "name",
+                "optional": true,
+                "type": "string"
+              },
+              {
+                "control_type": "text",
+                "label": "Access profile authentication type",
+                "name": "type",
+                "optional": true,
+                "type": "string"
+              }
+            ],
+            "type": "object"
+          },
+          {
+            "label": "API client",
+            "name": "client",
+            "properties": [
+              {
+                "control_type": "text",
+                "label": "API client ID",
+                "name": "id",
+                "optional": true,
+                "type": "string"
+              },
+              {
+                "control_type": "text",
+                "label": "API client name",
+                "name": "name",
+                "optional": true,
+                "type": "string"
+              }
+            ],
+            "type": "object"
+          },
+          {
+            "label": "JWT claims",
+            "name": "jwt_payload",
+            "properties": [
+              {
+                "control_type": "integer",
+                "label": "Issued At",
+                "name": "iat",
+                "optional": true,
+                "parse_output": "date_time_conversion",
+                "render_input": "date_time_conversion",
+                "type": "date_time"
+              },
+              {
+                "control_type": "integer",
+                "label": "Not Before",
+                "name": "nbf",
+                "optional": true,
+                "parse_output": "date_time_conversion",
+                "render_input": "date_time_conversion",
+                "type": "date_time"
+              },
+              {
+                "control_type": "integer",
+                "label": "Expiration Time",
+                "name": "exp",
+                "optional": true,
+                "parse_output": "date_time_conversion",
+                "render_input": "date_time_conversion",
+                "type": "date_time"
+              },
+              {
+                "control_type": "text",
+                "label": "Audience",
+                "name": "aud",
+                "optional": true,
+                "type": "string"
+              },
+              {
+                "control_type": "text",
+                "label": "JWT ID",
+                "name": "jti",
+                "optional": true,
+                "type": "string"
+              },
+              {
+                "control_type": "text",
+                "label": "Issuer",
+                "name": "iss",
+                "optional": true,
+                "type": "string"
+              }
+            ],
+            "type": "object"
+          },
+          {
+            "label": "Token introspection",
+            "name": "introspect",
+            "properties": [
+              {
+                "label": "Response Body",
+                "name": "payload",
+                "properties": [
+                  {
+                    "control_type": "checkbox",
+                    "label": "Active",
+                    "name": "active",
+                    "optional": true,
+                    "parse_output": "boolean_conversion",
+                    "render_input": "boolean_conversion",
+                    "toggle_field": {
+                      "control_type": "text",
+                      "label": "Active",
+                      "name": "active",
+                      "optional": true,
+                      "toggle_hint": "Use custom value",
+                      "type": "boolean"
+                    },
+                    "toggle_hint": "Select from option list",
+                    "type": "boolean"
+                  },
+                  {
+                    "control_type": "text",
+                    "label": "Scope",
+                    "name": "scope",
+                    "optional": true,
+                    "type": "string"
+                  },
+                  {
+                    "control_type": "text",
+                    "label": "Client ID",
+                    "name": "client_id",
+                    "optional": true,
+                    "type": "string"
+                  },
+                  {
+                    "control_type": "text",
+                    "label": "Username",
+                    "name": "username",
+                    "optional": true,
+                    "type": "string"
+                  },
+                  {
+                    "control_type": "text",
+                    "label": "Token type",
+                    "name": "token_type",
+                    "optional": true,
+                    "type": "string"
+                  },
+                  {
+                    "control_type": "text",
+                    "label": "Exp",
+                    "name": "exp",
+                    "optional": true,
+                    "type": "string"
+                  }
+                ],
+                "type": "object"
+              }
+            ],
+            "type": "object"
+          }
+        ],
+        "type": "object"
+      },
+      {
+        "label": "Request parameters",
+        "name": "request",
+        "properties": [
+          {
+            "control_type": "text",
+            "hint": "Unique identifier for the request",
+            "label": "Request ID",
+            "name": "request_id",
+            "optional": false,
+            "type": "string"
+          }
+        ],
+        "type": "object"
+      }
+    ],
+    "format_version": 2,
+    "input": {
+      "request": {
+        "content_type": "json",
+        "schema": "[{\"name\":\"request_id\",\"type\":\"string\",\"control_type\":\"text\",\"label\":\"Request ID\",\"optional\":false,\"hint\":\"Unique identifier for the request\"}]"
+      },
+      "response": {
+        "content_type": "json",
+        "responses": [
+          {
+            "body_schema": "[{\"name\":\"status\",\"type\":\"string\",\"optional\":true,\"control_type\":\"text\",\"label\":\"Status\"},{\"name\":\"request_id\",\"type\":\"string\",\"optional\":true,\"control_type\":\"text\",\"label\":\"Request ID\"}]",
+            "http_status_code": "200",
+            "name": "Success"
+          },
+          {
+            "body_schema": "[{\"name\":\"error\",\"type\":\"string\",\"optional\":true,\"control_type\":\"text\",\"label\":\"Error\"}]",
+            "http_status_code": "400",
+            "name": "Error"
+          }
+        ]
+      }
+    },
+    "keyword": "trigger",
+    "name": "receive_request",
+    "number": 0,
+    "provider": "workato_api_platform",
+    "uuid": "api-trigger-001"
+  },
+  "concurrency": 1,
+  "config": [
+    {
+      "account_id": null,
+      "keyword": "application",
+      "name": "workato_api_platform",
+      "provider": "workato_api_platform",
+      "skip_validation": false
+    },
+    {
+      "account_id": null,
+      "keyword": "application",
+      "name": "py_eval",
+      "provider": "py_eval",
+      "skip_validation": false
+    }
+  ],
+  "description": "API endpoint that validates a request_id parameter, processes it via py_eval, and returns 200. If request_id is missing, stops the recipe instead of returning an error response — demonstrating the stop action pattern in API endpoint recipes.",
+  "name": "Golden API Endpoint with Stop",
+  "private": false,
+  "version": 12
+}

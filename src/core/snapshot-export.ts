@@ -9,7 +9,7 @@
  *   - aliasMap: step.as → nodeId
  */
 
-import { buildIgm } from "./transformer";
+import { buildIgm, getProviderDisplayName } from "./transformer";
 import { readFileSync } from "fs";
 
 const filePath = process.argv[2];
@@ -38,6 +38,8 @@ const nodes = graph.nodes.map((n) => ({
   pointer: n.source.jsonPointer,
   is_terminal: !!n.ui?.isTerminal,
   provider: n.step?.provider ?? null,
+  provider_display_name: getProviderDisplayName(n.step?.provider) ?? "",
+  trigger_type: n.ui?.triggerType ?? "",
   step_as: n.step?.as ?? "",
   step_name: n.step?.name ?? "",
   http_status: n.ui?.httpStatus ?? "",

@@ -2,7 +2,7 @@
   "name": "recipe-visualizer",
   "displayName": "Recipe Visualizer",
   "description": "Visualize Workato recipe JSON files as interactive workflow graphs",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "publisher": "your-publisher-id",
   "private": true,
   "repository": {
