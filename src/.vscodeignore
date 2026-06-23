@@ -5,8 +5,10 @@ shared/**
 webview-ui/**
 fixtures/**
 
+# Internal docs (keep README.md, CHANGELOG.md, LICENSE.md for the Marketplace listing)
+docs/**
+
 # Config files
-*.md
 tsconfig*.json
 vite.config.ts
 .eslintrc*

@@ -18,10 +18,6 @@ Works in **VS Code**, **Cursor**, **Windsurf**, and any VS Code fork.
 - **Layout toggle** — Switch between left-to-right and top-to-bottom layout directions
 - **Cross-recipe drill-down** — `call_recipe` nodes open the target recipe in a new visualizer panel
 
-<p align="center">
-  <img src="docs/assets/recipe_visualizer.gif" alt="Recipe Visualizer demo" width="800">
-</p>
-
 ## Installation
 
 ```bash
