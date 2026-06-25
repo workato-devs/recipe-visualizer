@@ -1,6 +1,3 @@
-# Build output                                                                                                                                                                                            
-*.vsix                                                               
-
 # Dependencies
 node_modules/
 
