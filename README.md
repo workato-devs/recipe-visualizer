@@ -51,3 +51,4 @@ Contributions are welcome! Please open an issue to discuss your idea before subm
 ## License
 
 [MIT](LICENSE.md)
+
