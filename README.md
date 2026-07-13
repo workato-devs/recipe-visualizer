@@ -21,7 +21,7 @@ Works in **VS Code**, **Cursor**, **Windsurf**, and any VS Code fork.
 ## Installation
 
 ```bash
-code --install-extension releases/recipe-visualizer-<version>.vsix
+code --install-extension src/releases/recipe-visualizer-1.0.0.vsix
 ```
 
 Replace `code` with `cursor` or `windsurf` as needed.
