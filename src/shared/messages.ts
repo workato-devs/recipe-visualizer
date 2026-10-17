@@ -44,10 +44,12 @@ export interface WebviewReadyMessage {
 
 export interface OpenCalledRecipeMessage {
   type: "openCalledRecipe";
-  /** Relative path like "folder/recipe.recipe.json" */
-  zipName: string;
-  /** For display in error messages */
+  /** Relative path like "folder/recipe.recipe.json" (absent when flow_id is a bare ID) */
+  zipName?: string;
+  /** For display in error messages, and for lookup by name when zipName is absent */
   recipeName?: string;
+  /** Numeric recipe ID when flow_id is a bare ID */
+  flowId?: string;
 }
 
 export type WebviewToExtensionMessage =

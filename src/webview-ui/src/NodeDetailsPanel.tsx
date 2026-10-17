@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { IgmNode, SchemaField } from "../../shared/types";
+import { IgmNode, RecipeCallRef, SchemaField } from "../../shared/types";
 
 interface NodeDetailsPanelProps {
   node: IgmNode | null;
   onClose: () => void;
   onNavigateToSource?: (node: IgmNode) => void;
-  onOpenCalledRecipe?: (zipName: string, recipeName?: string) => void;
+  onOpenCalledRecipe?: (ref: RecipeCallRef, fallbackName?: string) => void;
 }
 
 export function NodeDetailsPanel({ node, onClose, onNavigateToSource, onOpenCalledRecipe }: NodeDetailsPanelProps) {
@@ -28,13 +28,11 @@ export function NodeDetailsPanel({ node, onClose, onNavigateToSource, onOpenCall
               Show code
             </button>
           )}
-          {node.ui?.isRecipeCall && node.ui?.recipeCallRef?.zipName && onOpenCalledRecipe && (
+          {node.ui?.isRecipeCall && node.ui?.recipeCallRef &&
+            (node.ui.recipeCallRef.zipName || node.ui.recipeCallRef.name) && onOpenCalledRecipe && (
             <button
               className="open-recipe-button"
-              onClick={() => onOpenCalledRecipe(
-                node.ui!.recipeCallRef!.zipName!,
-                node.ui!.recipeCallRef?.name || node.label
-              )}
+              onClick={() => onOpenCalledRecipe(node.ui!.recipeCallRef!, node.label)}
               title={`Open ${node.ui.recipeCallRef.name || 'called recipe'}`}
             >
               Open recipe
@@ -50,6 +48,14 @@ export function NodeDetailsPanel({ node, onClose, onNavigateToSource, onOpenCall
         {/* Provider/Badge */}
         {node.ui?.badge && (
           <DetailRow label="Provider" value={node.ui.badge} />
+        )}
+
+        {/* Repeat while loop details */}
+        {node.ui?.loopType === "repeat" && node.ui.repeatCondition && (
+          <DetailRow label="Repeat while" value={node.ui.repeatCondition} mono />
+        )}
+        {node.ui?.loopType === "repeat" && node.ui.maxIterations && (
+          <DetailRow label="Max iterations" value={node.ui.maxIterations} />
         )}
 
         {/* HTTP Status for terminals */}

@@ -108,6 +108,8 @@ export interface RecipeCallRef {
   name?: string;
   /** Folder containing the recipe */
   folder?: string;
+  /** Numeric recipe ID, present when flow_id is a bare ID (e.g. single-recipe `wk recipes pull`) */
+  flowId?: string;
 }
 
 export interface NodeUi {
@@ -150,6 +152,15 @@ export interface NodeUi {
 
   /** Foreach repeat mode (e.g., "simple", "batch") */
   repeatMode?: string;
+
+  /** Loop flavor for foreach-kind nodes: "foreach" (default) or "repeat" (repeat while) */
+  loopType?: "foreach" | "repeat";
+
+  /** Repeat while: maximum iteration count */
+  maxIterations?: string;
+
+  /** Repeat while: simplified condition text */
+  repeatCondition?: string;
 
   /** Internal: if node needs "false" edge to next step (no else branch) */
   needsFalseExit?: boolean;

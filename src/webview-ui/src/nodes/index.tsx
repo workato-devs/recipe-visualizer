@@ -385,7 +385,7 @@ export const ForeachNode = memo(({ data, selected }: CustomNodeProps) => (
     <StepNumberBadge number={data.step?.number} />
     <Handle type="target" position={getTargetPosition(data.layoutDirection)} style={{ ...smallHandleStyle, background: "#8b5cf6" }} />
     <span style={{ fontSize: 10 }}>↻</span>
-    foreach
+    {data.ui?.loopType === "repeat" ? "repeat" : "foreach"}
     <Handle type="source" position={getSourcePosition(data.layoutDirection)} style={{ ...smallHandleStyle, background: "#8b5cf6" }} />
   </div>
 ));

@@ -177,7 +177,7 @@ export class RecipeVisualizerPanel {
         break;
 
       case "openCalledRecipe":
-        this._openCalledRecipe(message.zipName, message.recipeName);
+        this._openCalledRecipe(message.zipName, message.recipeName, message.flowId);
         break;
     }
   }
@@ -245,7 +245,7 @@ export class RecipeVisualizerPanel {
     return null;
   }
 
-  private async _openCalledRecipe(zipName: string, recipeName?: string) {
+  private async _openCalledRecipe(zipName?: string, recipeName?: string, flowId?: string) {
     // zipName is relative path like "atomic-salesforce-recipes/search_contact_by_email.recipe.json"
 
     // Get workspace folder from current document
@@ -255,14 +255,27 @@ export class RecipeVisualizerPanel {
       return;
     }
 
+    // flow_id was a bare recipe ID (e.g. pulled with `wk recipes pull <id>`): match by recipe name
+    if (!zipName) {
+      const match = recipeName ? await this._findRecipeByName(workspaceFolder, recipeName) : undefined;
+      if (match) {
+        await this._openRecipeFile(match);
+        return;
+      }
+      const label = recipeName ? `"${recipeName}"` : `with ID ${flowId ?? "unknown"}`;
+      vscode.window.showWarningMessage(
+        `Recipe ${label} not found in workspace. This step references the called recipe by ID only; ` +
+        `pull the called recipe (or its parent project) into the workspace to drill down.`
+      );
+      return;
+    }
+
     // Search for the file by glob pattern
     const pattern = new vscode.RelativePattern(workspaceFolder, `**/${zipName}`);
     const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**', 1);
 
     if (files.length > 0) {
-      const doc = await vscode.workspace.openTextDocument(files[0]);
-      await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One });
-      RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
+      await this._openRecipeFile(files[0]);
       return;
     }
 
@@ -273,9 +286,7 @@ export class RecipeVisualizerPanel {
       const fallbackFiles = await vscode.workspace.findFiles(fallbackPattern, '**/node_modules/**', 1);
 
       if (fallbackFiles.length > 0) {
-        const doc = await vscode.workspace.openTextDocument(fallbackFiles[0]);
-        await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One });
-        RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
+        await this._openRecipeFile(fallbackFiles[0]);
         return;
       }
     }
@@ -284,6 +295,36 @@ export class RecipeVisualizerPanel {
     vscode.window.showWarningMessage(
       `Recipe "${recipeName || zipName}" not found in workspace`
     );
+  }
+
+  private async _openRecipeFile(uri: vscode.Uri) {
+    const doc = await vscode.workspace.openTextDocument(uri);
+    await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One });
+    RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
+  }
+
+  /**
+   * Find a recipe file whose top-level "name" matches, for calls that reference
+   * the target only by numeric ID plus a display name.
+   */
+  private async _findRecipeByName(
+    workspaceFolder: vscode.WorkspaceFolder,
+    recipeName: string
+  ): Promise<vscode.Uri | undefined> {
+    const pattern = new vscode.RelativePattern(workspaceFolder, '**/*.recipe.json');
+    const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**');
+
+    for (const file of files) {
+      if (file.toString() === this._document.uri.toString()) continue;
+      try {
+        const bytes = await vscode.workspace.fs.readFile(file);
+        const recipe = JSON.parse(Buffer.from(bytes).toString('utf-8'));
+        if (recipe?.name === recipeName) return file;
+      } catch {
+        // Skip unreadable or malformed files
+      }
+    }
+    return undefined;
   }
 
   private _updateGraph() {

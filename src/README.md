@@ -11,12 +11,12 @@ complex control flow.
 ## Features
 
 - **Visual workflow graphs** — nested recipe JSON rendered as clean, directed graphs with orthogonal edge routing
-- **Full control flow** — `if/else`, `try/catch`, `foreach` loops, and cross-recipe calls visualized with swim-lane layout
+- **Full control flow** — `if/else`, `try/catch`, `foreach` and `repeat while` loops, and cross-recipe calls visualized with swim-lane layout
 - **Click-to-inspect** — select any node to see its metadata, input/output schemas, connection info, and step inputs
 - **Editor navigation** — "Go to Code" jumps from a graph node to the exact line in your JSON editor
 - **Cursor sync** — moving your cursor in the editor highlights the corresponding node in the graph
 - **Layout toggle** — switch between left-to-right and top-to-bottom layout directions
-- **Cross-recipe drill-down** — `call_recipe` nodes open the target recipe in a new visualizer panel
+- **Cross-recipe drill-down** — `call_recipe` and `call_recipe_async` nodes open the target recipe in a new visualizer panel
 
 ---
 
