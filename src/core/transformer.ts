@@ -17,6 +17,7 @@ import {
   Diagnostic,
   BuildOptions,
   SchemaField,
+  RecipeCallRef,
 } from "../shared/types";
 
 // ============================================================================
@@ -173,7 +174,55 @@ function isExplicitTerminal(step: any): boolean {
  * Check if step calls another recipe
  */
 function isRecipeCall(step: any): boolean {
-  return step.provider === "workato_recipe_function" && step.name === "call_recipe";
+  // Matches call_recipe, call_recipe_async, and any future call_recipe_* variants
+  return (
+    step.provider === "workato_recipe_function" &&
+    typeof step.name === "string" &&
+    step.name.startsWith("call_recipe")
+  );
+}
+
+/**
+ * Build a drill-down reference from a recipe call's flow_id.
+ * flow_id is usually an object with zip_name, but recipes pulled on their own
+ * store a bare numeric ID string; fall back to the picklist display name then.
+ */
+function getRecipeCallRef(step: any): RecipeCallRef | undefined {
+  const flowId = step.input?.flow_id;
+  if (!flowId) return undefined;
+
+  if (typeof flowId === "object") {
+    return {
+      zipName: flowId.zip_name,
+      name: flowId.name ?? step.dynamicPickListSelection?.flow_id,
+      folder: flowId.folder,
+    };
+  }
+
+  const pickListName = step.dynamicPickListSelection?.flow_id;
+  return {
+    name: typeof pickListName === "string" ? pickListName : undefined,
+    flowId: String(flowId),
+  };
+}
+
+/**
+ * Summarize a Workato condition block ({ type, operand, conditions[] }) for display
+ */
+function summarizeConditions(input: any): string | undefined {
+  const conditions = input?.conditions;
+  if (!Array.isArray(conditions) || conditions.length === 0) return undefined;
+
+  const joiner = ` ${input.operand ?? "and"} `;
+  return conditions
+    .map((c: any) => {
+      const parts = [c.lhs, c.operand, c.rhs]
+        .filter((p) => p !== undefined && p !== null && p !== "")
+        .map((p) => simplifyValue(p, 40));
+      return parts.join(" ");
+    })
+    .filter((s: string) => s.length > 0)
+    .join(joiner) || undefined;
 }
 
 /**
@@ -288,6 +337,8 @@ function isExecutableStep(obj: any): boolean {
   if (!obj || typeof obj !== "object") return false;
   // else and catch are containers, not mainline executable steps
   if (obj.keyword === "else" || obj.keyword === "catch") return false;
+  // while_condition holds a repeat loop's exit condition, shown on the repeat node
+  if (obj.keyword === "while_condition") return false;
   if (typeof obj.keyword === "string") return true;
   // Some recipes use provider+name without explicit keyword
   if (typeof obj.provider === "string" && typeof obj.name === "string") return true;
@@ -506,13 +557,8 @@ function createActionNode(step: any, jsonPointer: string, config?: any[]): IgmNo
   };
 
   // Extract recipe reference for drill-down when it's a recipe call
-  if (recipeCall && step.input?.flow_id) {
-    const flowId = step.input.flow_id;
-    ui.recipeCallRef = {
-      zipName: flowId.zip_name,
-      name: flowId.name,
-      folder: flowId.folder,
-    };
+  if (recipeCall) {
+    ui.recipeCallRef = getRecipeCallRef(step);
   }
 
   return {
@@ -602,6 +648,32 @@ function createForeachNode(step: any, jsonPointer: string): IgmNode {
       // Store loop metadata for display
       loopSource: step.source,
       repeatMode: step.repeat_mode,
+    },
+  };
+}
+
+/**
+ * Repeat-while loops share the foreach node kind (same container layout and
+ * loop-back edges), flagged with loopType "repeat" for display.
+ */
+function createRepeatNode(step: any, jsonPointer: string, conditionStep?: any): IgmNode {
+  const id = getNodeId(step, jsonPointer);
+  const maxIterations = step.input?.max_iterations;
+  return {
+    id,
+    kind: "foreach",
+    label: step.as ?? "Repeat",
+    source: { jsonPointer },
+    step: {
+      keyword: "repeat",
+      uuid: step.uuid,
+      number: step.number,
+      as: step.as,
+    },
+    ui: {
+      loopType: "repeat",
+      maxIterations: maxIterations !== undefined && maxIterations !== "" ? String(maxIterations) : undefined,
+      repeatCondition: summarizeConditions(conditionStep?.input) ?? summarizeConditions(step.input),
     },
   };
 }
@@ -705,10 +777,13 @@ function processStepSequence(
     results.push(processStep(step, pointer, ctx));
   }
 
+  // Skip steps that produced no nodes (e.g. while_condition) so the chain stays connected
+  const placed = results.filter((r) => r.headNodeId);
+
   // Create sequential edges between steps
-  for (let i = 0; i < results.length - 1; i++) {
-    const current = results[i];
-    const next = results[i + 1];
+  for (let i = 0; i < placed.length - 1; i++) {
+    const current = placed[i];
+    const next = placed[i + 1];
 
     if (next.headNodeId) {
       for (const tailNode of current.tailNodes) {
@@ -734,8 +809,8 @@ function processStepSequence(
   }
 
   // Return head of first step and tails of last step
-  const firstHead = results.find((r) => r.headNodeId)?.headNodeId ?? null;
-  const lastTails = results[results.length - 1]?.tailNodes ?? [];
+  const firstHead = placed[0]?.headNodeId ?? null;
+  const lastTails = placed[placed.length - 1]?.tailNodes ?? [];
 
   return { headNodeId: firstHead, tailNodes: lastTails };
 }
@@ -774,20 +849,14 @@ function processStep(step: any, jsonPointer: string, ctx: BuildContext): Travers
         return processTry(step, jsonPointer, ctx);
       case "foreach":
         return processForeach(step, jsonPointer, ctx);
+      case "repeat":
+        return processRepeat(step, jsonPointer, ctx);
       default:
         // Unknown keyword or provider+name without keyword
         if (step.provider && step.name) {
           return processAction(step, jsonPointer, ctx);
         }
-        // Create error node for truly unknown steps
-        const errorNode = createErrorNode(`Unknown keyword: ${keyword}`, jsonPointer, step);
-        ctx.nodes.push(errorNode);
-        ctx.diagnostics.push({
-          level: "warn",
-          message: `Unknown keyword: ${keyword}`,
-          source: { jsonPointer },
-        });
-        return { headNodeId: errorNode.id, tailNodes: [errorNode] };
+        return processUnknown(step, jsonPointer, ctx);
     }
   } catch (error) {
     // Create error node when processing fails
@@ -1034,7 +1103,53 @@ function processTry(step: any, jsonPointer: string, ctx: BuildContext): Traversa
 }
 
 function processForeach(step: any, jsonPointer: string, ctx: BuildContext): TraversalResult {
-  const foreachNode = createForeachNode(step, jsonPointer);
+  return processLoop(createForeachNode(step, jsonPointer), step, jsonPointer, ctx);
+}
+
+function processRepeat(step: any, jsonPointer: string, ctx: BuildContext): TraversalResult {
+  // The loop's exit condition may live in a trailing while_condition child; it is
+  // shown on the repeat node rather than as a body step.
+  const block: any[] = step.block ?? [];
+  const conditionStep = block.find((item) => item?.keyword === "while_condition");
+  return processLoop(createRepeatNode(step, jsonPointer, conditionStep), step, jsonPointer, ctx);
+}
+
+/**
+ * Draw a step with an unrecognized keyword as an error node, but keep its inner
+ * steps in the graph so new Workato step types don't hide whole sections.
+ */
+function processUnknown(step: any, jsonPointer: string, ctx: BuildContext): TraversalResult {
+  const errorNode = createErrorNode(`Unknown keyword: ${step.keyword}`, jsonPointer, step);
+  errorNode.ui = { ...errorNode.ui, partition: ctx.partition };
+  ctx.nodes.push(errorNode);
+  ctx.diagnostics.push({
+    level: "warn",
+    message: `Unknown keyword: ${step.keyword}`,
+    source: { jsonPointer },
+  });
+
+  if (Array.isArray(step.block) && step.block.length > 0) {
+    const blockResult = processStepSequence(step.block, `${jsonPointer}/block`, ctx);
+    if (blockResult.headNodeId) {
+      ctx.edges.push({
+        id: makeEdgeId("next", errorNode.id, blockResult.headNodeId),
+        from: errorNode.id,
+        to: blockResult.headNodeId,
+        kind: "next",
+      });
+      return { headNodeId: errorNode.id, tailNodes: blockResult.tailNodes };
+    }
+  }
+
+  return { headNodeId: errorNode.id, tailNodes: [errorNode] };
+}
+
+function processLoop(
+  foreachNode: IgmNode,
+  step: any,
+  jsonPointer: string,
+  ctx: BuildContext
+): TraversalResult {
   ctx.nodes.push(foreachNode);
 
   if (step.as) {
@@ -1043,7 +1158,7 @@ function processForeach(step: any, jsonPointer: string, ctx: BuildContext): Trav
 
   const block = step.block ?? [];
 
-  // Process loop body steps
+  // Process loop body steps (while_condition children are non-executable and skipped)
   const bodyResult = processStepSequence(block, `${jsonPointer}/block`, ctx);
 
   if (bodyResult.headNodeId) {
@@ -1212,17 +1327,25 @@ export function buildIgm(recipeJson: unknown, _opts?: BuildOptions): IgmGraph {
   }
 
   // 4. Connect dangling nodes to ::end
-  const nodesWithOutgoing = new Set(ctx.edges.map((e) => e.from));
+  // A loop's own "loop" edge enters its body rather than leaving it, so a loop
+  // that ends its block still needs an exit edge.
+  const loopNodeIds = new Set(ctx.nodes.filter((n) => n.kind === "foreach").map((n) => n.id));
+  const nodesWithOutgoing = new Set(
+    ctx.edges
+      .filter((e) => !(e.kind === "loop" && loopNodeIds.has(e.from)))
+      .map((e) => e.from)
+  );
   for (const node of ctx.nodes) {
     if (node.id === "::end") continue;
     if (node.ui?.isTerminal) continue;
 
     if (!nodesWithOutgoing.has(node.id)) {
+      const edgeKind: IgmEdgeKind = node.kind === "foreach" ? "exit" : "next";
       ctx.edges.push({
-        id: makeEdgeId("next", node.id, "::end"),
+        id: makeEdgeId(edgeKind, node.id, "::end"),
         from: node.id,
         to: "::end",
-        kind: "next",
+        kind: edgeKind,
       });
     }
   }

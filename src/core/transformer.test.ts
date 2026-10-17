@@ -380,6 +380,251 @@ test("recipe call: does not detect old 'call' name (regression)", () => {
   assert(callNode.ui?.isRecipeCall !== true, "Should NOT be marked as recipe call with old name");
 });
 
+test("recipe call: detects call_recipe_async actions (#3)", () => {
+  const recipe = {
+    name: "Test Async Recipe Call",
+    code: {
+      keyword: "trigger",
+      provider: "workato_recipe_function",
+      name: "execute",
+      uuid: "trigger-uuid",
+      block: [
+        {
+          number: 2,
+          keyword: "action",
+          provider: "workato_recipe_function",
+          name: "call_recipe_async",
+          as: "call_child",
+          input: {
+            flow_id: {
+              zip_name: "child_recipe.recipe.json",
+              name: "Child recipe",
+              folder: "",
+            },
+          },
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  const callNode = graph.nodes.find((n) => n.step?.name === "call_recipe_async");
+  assert(callNode !== undefined, "Should have call_recipe_async node");
+  assert(callNode.ui?.isRecipeCall === true, "Should be marked as recipe call");
+  assert(
+    callNode.ui?.recipeCallRef?.zipName === "child_recipe.recipe.json",
+    `Expected zipName to match, got ${callNode.ui?.recipeCallRef?.zipName}`
+  );
+});
+
+test("recipe call: bare numeric flow_id falls back to picklist name (#3)", () => {
+  const recipe = {
+    name: "Test Bare Flow ID",
+    code: {
+      keyword: "trigger",
+      provider: "workato_recipe_function",
+      name: "execute",
+      uuid: "trigger-uuid",
+      block: [
+        {
+          number: 1,
+          keyword: "action",
+          provider: "workato_recipe_function",
+          name: "call_recipe",
+          as: "call_child",
+          input: { flow_id: "83009347" },
+          dynamicPickListSelection: { flow_id: "Child recipe" },
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  const callNode = graph.nodes.find((n) => n.step?.as === "call_child");
+  assert(callNode !== undefined, "Should have call node");
+  const ref = callNode.ui?.recipeCallRef;
+  assert(ref !== undefined, "Should have recipeCallRef");
+  assert(ref.zipName === undefined, `Expected no zipName, got ${ref.zipName}`);
+  assert(ref.name === "Child recipe", `Expected picklist name, got ${ref.name}`);
+  assert(ref.flowId === "83009347", `Expected flowId, got ${ref.flowId}`);
+});
+
+// ============================================================================
+// Repeat while loop tests (#4)
+// ============================================================================
+
+function repeatRecipe(repeatBlockExtra: any[] = []): unknown {
+  return {
+    name: "Test Repeat",
+    code: {
+      keyword: "trigger",
+      provider: "clock",
+      name: "scheduled_event",
+      uuid: "trigger-uuid",
+      block: [
+        {
+          number: 1, keyword: "try", input: {},
+          block: [
+            {
+              number: 2, keyword: "repeat", as: "poll_loop",
+              input: { max_iterations: "10" },
+              block: [
+                { number: 3, keyword: "action", provider: "rest", name: "make_request_v2", as: "check_status", input: {} },
+                { number: 4, keyword: "action", provider: "clock", name: "wait_for_interval", as: "wait", input: { interval: "30" } },
+                ...repeatBlockExtra,
+              ],
+            },
+            { number: 5, keyword: "catch", as: "catch_err", input: {}, block: [] },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+test("repeat: renders as loop container with inner steps", () => {
+  const graph = buildIgm(repeatRecipe());
+
+  const errorNodes = graph.nodes.filter((n) => n.kind === "error");
+  assert(errorNodes.length === 0, `Expected no error nodes, got: ${errorNodes.map((n) => n.ui?.badge).join(", ")}`);
+
+  const loopNode = graph.nodes.find((n) => n.step?.as === "poll_loop");
+  assert(loopNode !== undefined, "Should have repeat node");
+  assert(loopNode.kind === "foreach", `Expected foreach kind, got ${loopNode.kind}`);
+  assert(loopNode.ui?.loopType === "repeat", `Expected loopType 'repeat', got ${loopNode.ui?.loopType}`);
+  assert(loopNode.step?.keyword === "repeat", `Expected keyword 'repeat', got ${loopNode.step?.keyword}`);
+  assert(loopNode.ui?.maxIterations === "10", `Expected maxIterations '10', got ${loopNode.ui?.maxIterations}`);
+
+  assert(graph.nodes.some((n) => n.step?.as === "check_status"), "Should include check_status");
+  assert(graph.nodes.some((n) => n.step?.as === "wait"), "Should include wait");
+});
+
+test("repeat: loop at end of a block exits to ::end", () => {
+  const graph = buildIgm(repeatRecipe());
+  const loopNode = graph.nodes.find((n) => n.step?.as === "poll_loop")!;
+
+  assert(
+    graph.edges.some((e) => e.kind === "exit" && e.from === loopNode.id && e.to === "::end"),
+    "Expected exit edge repeat → ::end"
+  );
+});
+
+test("foreach: loop as last step exits to ::end", () => {
+  const recipe = {
+    name: "Test Trailing Foreach",
+    code: {
+      keyword: "trigger",
+      provider: "test",
+      name: "test",
+      uuid: "trigger-uuid",
+      block: [
+        {
+          number: 1, keyword: "foreach", as: "each_item", uuid: "foreach-uuid",
+          block: [
+            { number: 2, keyword: "action", provider: "logger", name: "log_message", as: "log_item" },
+          ],
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  assert(
+    graph.edges.some((e) => e.kind === "exit" && e.from === "foreach-uuid" && e.to === "::end"),
+    "Expected exit edge foreach → ::end"
+  );
+  // The loop-back tail must not also be wired to ::end
+  const logNode = graph.nodes.find((n) => n.step?.as === "log_item")!;
+  assert(
+    !graph.edges.some((e) => e.from === logNode.id && e.to === "::end"),
+    "Loop body tail should only loop back, not exit to ::end"
+  );
+});
+
+test("repeat: has loop entry and loop-back edges", () => {
+  const graph = buildIgm(repeatRecipe());
+  const loopNode = graph.nodes.find((n) => n.step?.as === "poll_loop")!;
+  const checkNode = graph.nodes.find((n) => n.step?.as === "check_status")!;
+  const waitNode = graph.nodes.find((n) => n.step?.as === "wait")!;
+
+  assert(
+    graph.edges.some((e) => e.kind === "loop" && e.from === loopNode.id && e.to === checkNode.id),
+    "Expected loop entry edge repeat → check_status"
+  );
+  assert(
+    graph.edges.some((e) => e.kind === "loop" && e.from === waitNode.id && e.to === loopNode.id),
+    "Expected loop-back edge wait → repeat"
+  );
+});
+
+test("repeat: while_condition child is shown on the node, not as a step", () => {
+  const graph = buildIgm(repeatRecipe([
+    {
+      number: 5,
+      keyword: "while_condition",
+      input: {
+        type: "compound",
+        operand: "and",
+        conditions: [{ operand: "equals_to", lhs: "status", rhs: "pending" }],
+      },
+    },
+  ]));
+
+  const errorNodes = graph.nodes.filter((n) => n.kind === "error");
+  assert(errorNodes.length === 0, `Expected no error nodes, got ${errorNodes.length}`);
+
+  const loopNode = graph.nodes.find((n) => n.step?.as === "poll_loop")!;
+  assert(
+    loopNode.ui?.repeatCondition === "status equals_to pending",
+    `Expected condition summary, got ${loopNode.ui?.repeatCondition}`
+  );
+
+  // Trailing non-executable child must not break the loop-back edge
+  const waitNode = graph.nodes.find((n) => n.step?.as === "wait")!;
+  assert(
+    graph.edges.some((e) => e.kind === "loop" && e.from === waitNode.id && e.to === loopNode.id),
+    "Expected loop-back edge wait → repeat"
+  );
+});
+
+test("unknown keyword: inner steps are still drawn", () => {
+  const recipe = {
+    name: "Test Unknown Container",
+    code: {
+      keyword: "trigger",
+      provider: "test",
+      name: "test",
+      uuid: "trigger-uuid",
+      block: [
+        {
+          number: 1, keyword: "future_container", as: "mystery",
+          block: [
+            { number: 2, keyword: "action", provider: "logger", name: "log_message", as: "inner_log" },
+          ],
+        },
+      ],
+    },
+  };
+
+  const graph = buildIgm(recipe);
+
+  const errorNode = graph.nodes.find((n) => n.kind === "error");
+  assert(errorNode !== undefined, "Unknown keyword should still produce an error node");
+  const innerNode = graph.nodes.find((n) => n.step?.as === "inner_log");
+  assert(innerNode !== undefined, "Inner step of unknown container should be drawn");
+  assert(
+    graph.edges.some((e) => e.from === errorNode.id && e.to === innerNode.id),
+    "Expected edge from unknown container to its inner step"
+  );
+  assert(
+    graph.diagnostics?.some((d) => d.message === "Unknown keyword: future_container") === true,
+    "Expected unknown keyword diagnostic"
+  );
+});
+
 // ============================================================================
 // Error recovery tests
 // ============================================================================

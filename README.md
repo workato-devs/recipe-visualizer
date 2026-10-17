@@ -11,17 +11,17 @@ Works in **VS Code**, **Cursor**, **Windsurf**, and any VS Code fork.
 ## Features
 
 - **Visual workflow graphs** — Nested recipe JSON rendered as clean, directed graphs with orthogonal edge routing
-- **Full control flow** — `if/else`, `try/catch`, `foreach` loops, and cross-recipe calls all visualized with swim lane layout
+- **Full control flow** — `if/else`, `try/catch`, `foreach` and `repeat while` loops, and cross-recipe calls all visualized with swim lane layout
 - **Click-to-inspect** — Select any node to see its metadata, input/output schemas, connection info, and step inputs
 - **Editor navigation** — "Go to Code" jumps from a graph node to the exact line in your JSON editor
 - **Cursor sync** — Moving your cursor in the editor highlights the corresponding node in the graph
 - **Layout toggle** — Switch between left-to-right and top-to-bottom layout directions
-- **Cross-recipe drill-down** — `call_recipe` nodes open the target recipe in a new visualizer panel
+- **Cross-recipe drill-down** — `call_recipe` and `call_recipe_async` nodes open the target recipe in a new visualizer panel
 
 ## Installation
 
 ```bash
-code --install-extension src/releases/recipe-visualizer-1.0.0.vsix
+code --install-extension src/releases/recipe-visualizer-1.1.0.vsix
 ```
 
 Replace `code` with `cursor` or `windsurf` as needed.

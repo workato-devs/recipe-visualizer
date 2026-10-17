@@ -15,7 +15,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { IgmGraph, IgmNode, IgmEdge } from "../../shared/types";
+import { IgmGraph, IgmNode, IgmEdge, RecipeCallRef } from "../../shared/types";
 import {
   ExtensionToWebviewMessage,
   WebviewToExtensionMessage,
@@ -598,12 +598,13 @@ export default function App() {
   }, []);
 
   // Handle open called recipe - drill-down to another recipe
-  const handleOpenCalledRecipe = useCallback((zipName: string, recipeName?: string) => {
+  const handleOpenCalledRecipe = useCallback((ref: RecipeCallRef, fallbackName?: string) => {
     if (!vscode) return;
     vscode.postMessage({
       type: "openCalledRecipe",
-      zipName,
-      recipeName,
+      zipName: ref.zipName,
+      recipeName: ref.name || fallbackName,
+      flowId: ref.flowId,
     });
   }, []);
 

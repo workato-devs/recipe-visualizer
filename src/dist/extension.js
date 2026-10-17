@@ -118,7 +118,34 @@ function isExplicitTerminal(step) {
   return step.provider === "workato_api_platform" && step.name === "return_response" || step.provider === "workato_recipe_function" && step.name === "return_result" || step.provider === "workato_genie" && step.name === "workflow_return_result" || step.keyword === "stop";
 }
 function isRecipeCall(step) {
-  return step.provider === "workato_recipe_function" && step.name === "call_recipe";
+  return step.provider === "workato_recipe_function" && typeof step.name === "string" && step.name.startsWith("call_recipe");
+}
+function getRecipeCallRef(step) {
+  const flowId = step.input?.flow_id;
+  if (!flowId)
+    return void 0;
+  if (typeof flowId === "object") {
+    return {
+      zipName: flowId.zip_name,
+      name: flowId.name ?? step.dynamicPickListSelection?.flow_id,
+      folder: flowId.folder
+    };
+  }
+  const pickListName = step.dynamicPickListSelection?.flow_id;
+  return {
+    name: typeof pickListName === "string" ? pickListName : void 0,
+    flowId: String(flowId)
+  };
+}
+function summarizeConditions(input) {
+  const conditions = input?.conditions;
+  if (!Array.isArray(conditions) || conditions.length === 0)
+    return void 0;
+  const joiner = ` ${input.operand ?? "and"} `;
+  return conditions.map((c) => {
+    const parts = [c.lhs, c.operand, c.rhs].filter((p) => p !== void 0 && p !== null && p !== "").map((p) => simplifyValue(p, 40));
+    return parts.join(" ");
+  }).filter((s) => s.length > 0).join(joiner) || void 0;
 }
 function getProviderDisplayName(provider) {
   if (!provider)
@@ -204,6 +231,8 @@ function isExecutableStep(obj) {
   if (!obj || typeof obj !== "object")
     return false;
   if (obj.keyword === "else" || obj.keyword === "catch")
+    return false;
+  if (obj.keyword === "while_condition")
     return false;
   if (typeof obj.keyword === "string")
     return true;
@@ -346,13 +375,8 @@ function createActionNode(step, jsonPointer, config) {
     stopWithError: isStop ? step.input?.stop_with_error === "true" : void 0,
     stopReason: isStop ? step.input?.stop_reason : void 0
   };
-  if (recipeCall && step.input?.flow_id) {
-    const flowId = step.input.flow_id;
-    ui.recipeCallRef = {
-      zipName: flowId.zip_name,
-      name: flowId.name,
-      folder: flowId.folder
-    };
+  if (recipeCall) {
+    ui.recipeCallRef = getRecipeCallRef(step);
   }
   return {
     id,
@@ -440,6 +464,27 @@ function createForeachNode(step, jsonPointer) {
     }
   };
 }
+function createRepeatNode(step, jsonPointer, conditionStep) {
+  const id = getNodeId(step, jsonPointer);
+  const maxIterations = step.input?.max_iterations;
+  return {
+    id,
+    kind: "foreach",
+    label: step.as ?? "Repeat",
+    source: { jsonPointer },
+    step: {
+      keyword: "repeat",
+      uuid: step.uuid,
+      number: step.number,
+      as: step.as
+    },
+    ui: {
+      loopType: "repeat",
+      maxIterations: maxIterations !== void 0 && maxIterations !== "" ? String(maxIterations) : void 0,
+      repeatCondition: summarizeConditions(conditionStep?.input) ?? summarizeConditions(step.input)
+    }
+  };
+}
 function createBranchNode(parentId, branchType, parentPointer, stepNumber) {
   const id = `${parentId}::${branchType}`;
   const labelMap = { then: "Then", else: "Else", catch: "Catch" };
@@ -502,9 +547,10 @@ function processStepSequence(steps, basePointer, ctx) {
     const pointer = `${basePointer}/${i}`;
     results.push(processStep(step, pointer, ctx));
   }
-  for (let i = 0; i < results.length - 1; i++) {
-    const current = results[i];
-    const next = results[i + 1];
+  const placed = results.filter((r) => r.headNodeId);
+  for (let i = 0; i < placed.length - 1; i++) {
+    const current = placed[i];
+    const next = placed[i + 1];
     if (next.headNodeId) {
       for (const tailNode of current.tailNodes) {
         if (!tailNode.ui?.isTerminal) {
@@ -524,8 +570,8 @@ function processStepSequence(steps, basePointer, ctx) {
       }
     }
   }
-  const firstHead = results.find((r) => r.headNodeId)?.headNodeId ?? null;
-  const lastTails = results[results.length - 1]?.tailNodes ?? [];
+  const firstHead = placed[0]?.headNodeId ?? null;
+  const lastTails = placed[placed.length - 1]?.tailNodes ?? [];
   return { headNodeId: firstHead, tailNodes: lastTails };
 }
 function processStep(step, jsonPointer, ctx) {
@@ -554,18 +600,13 @@ function processStep(step, jsonPointer, ctx) {
         return processTry(step, jsonPointer, ctx);
       case "foreach":
         return processForeach(step, jsonPointer, ctx);
+      case "repeat":
+        return processRepeat(step, jsonPointer, ctx);
       default:
         if (step.provider && step.name) {
           return processAction(step, jsonPointer, ctx);
         }
-        const errorNode = createErrorNode(`Unknown keyword: ${keyword}`, jsonPointer, step);
-        ctx.nodes.push(errorNode);
-        ctx.diagnostics.push({
-          level: "warn",
-          message: `Unknown keyword: ${keyword}`,
-          source: { jsonPointer }
-        });
-        return { headNodeId: errorNode.id, tailNodes: [errorNode] };
+        return processUnknown(step, jsonPointer, ctx);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Processing failed";
@@ -750,7 +791,37 @@ function processTry(step, jsonPointer, ctx) {
   return { headNodeId: tryNode.id, tailNodes: branchTails.filter((t) => t.ui?.isTerminal) };
 }
 function processForeach(step, jsonPointer, ctx) {
-  const foreachNode = createForeachNode(step, jsonPointer);
+  return processLoop(createForeachNode(step, jsonPointer), step, jsonPointer, ctx);
+}
+function processRepeat(step, jsonPointer, ctx) {
+  const block = step.block ?? [];
+  const conditionStep = block.find((item) => item?.keyword === "while_condition");
+  return processLoop(createRepeatNode(step, jsonPointer, conditionStep), step, jsonPointer, ctx);
+}
+function processUnknown(step, jsonPointer, ctx) {
+  const errorNode = createErrorNode(`Unknown keyword: ${step.keyword}`, jsonPointer, step);
+  errorNode.ui = { ...errorNode.ui, partition: ctx.partition };
+  ctx.nodes.push(errorNode);
+  ctx.diagnostics.push({
+    level: "warn",
+    message: `Unknown keyword: ${step.keyword}`,
+    source: { jsonPointer }
+  });
+  if (Array.isArray(step.block) && step.block.length > 0) {
+    const blockResult = processStepSequence(step.block, `${jsonPointer}/block`, ctx);
+    if (blockResult.headNodeId) {
+      ctx.edges.push({
+        id: makeEdgeId("next", errorNode.id, blockResult.headNodeId),
+        from: errorNode.id,
+        to: blockResult.headNodeId,
+        kind: "next"
+      });
+      return { headNodeId: errorNode.id, tailNodes: blockResult.tailNodes };
+    }
+  }
+  return { headNodeId: errorNode.id, tailNodes: [errorNode] };
+}
+function processLoop(foreachNode, step, jsonPointer, ctx) {
   ctx.nodes.push(foreachNode);
   if (step.as) {
     ctx.aliasMap.set(step.as, foreachNode.id);
@@ -884,18 +955,22 @@ function buildIgm(recipeJson, _opts) {
       });
     }
   }
-  const nodesWithOutgoing = new Set(ctx.edges.map((e) => e.from));
+  const loopNodeIds = new Set(ctx.nodes.filter((n) => n.kind === "foreach").map((n) => n.id));
+  const nodesWithOutgoing = new Set(
+    ctx.edges.filter((e) => !(e.kind === "loop" && loopNodeIds.has(e.from))).map((e) => e.from)
+  );
   for (const node of ctx.nodes) {
     if (node.id === "::end")
       continue;
     if (node.ui?.isTerminal)
       continue;
     if (!nodesWithOutgoing.has(node.id)) {
+      const edgeKind = node.kind === "foreach" ? "exit" : "next";
       ctx.edges.push({
-        id: makeEdgeId("next", node.id, "::end"),
+        id: makeEdgeId(edgeKind, node.id, "::end"),
         from: node.id,
         to: "::end",
-        kind: "next"
+        kind: edgeKind
       });
     }
   }
@@ -2068,7 +2143,7 @@ var RecipeVisualizerPanel = class _RecipeVisualizerPanel {
         this._navigateToSource(message.jsonPointer, message.uuid);
         break;
       case "openCalledRecipe":
-        this._openCalledRecipe(message.zipName, message.recipeName);
+        this._openCalledRecipe(message.zipName, message.recipeName, message.flowId);
         break;
     }
   }
@@ -2112,18 +2187,28 @@ var RecipeVisualizerPanel = class _RecipeVisualizerPanel {
     }
     return null;
   }
-  async _openCalledRecipe(zipName, recipeName) {
+  async _openCalledRecipe(zipName, recipeName, flowId) {
     const workspaceFolder = vscode2.workspace.getWorkspaceFolder(this._document.uri);
     if (!workspaceFolder) {
       vscode2.window.showWarningMessage(`Cannot find workspace for recipe lookup`);
       return;
     }
+    if (!zipName) {
+      const match = recipeName ? await this._findRecipeByName(workspaceFolder, recipeName) : void 0;
+      if (match) {
+        await this._openRecipeFile(match);
+        return;
+      }
+      const label = recipeName ? `"${recipeName}"` : `with ID ${flowId ?? "unknown"}`;
+      vscode2.window.showWarningMessage(
+        `Recipe ${label} not found in workspace. This step references the called recipe by ID only; pull the called recipe (or its parent project) into the workspace to drill down.`
+      );
+      return;
+    }
     const pattern = new vscode2.RelativePattern(workspaceFolder, `**/${zipName}`);
     const files = await vscode2.workspace.findFiles(pattern, "**/node_modules/**", 1);
     if (files.length > 0) {
-      const doc = await vscode2.workspace.openTextDocument(files[0]);
-      await vscode2.window.showTextDocument(doc, { viewColumn: vscode2.ViewColumn.One });
-      _RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
+      await this._openRecipeFile(files[0]);
       return;
     }
     const fileName = zipName.split("/").pop();
@@ -2131,15 +2216,38 @@ var RecipeVisualizerPanel = class _RecipeVisualizerPanel {
       const fallbackPattern = new vscode2.RelativePattern(workspaceFolder, `**/${fileName}`);
       const fallbackFiles = await vscode2.workspace.findFiles(fallbackPattern, "**/node_modules/**", 1);
       if (fallbackFiles.length > 0) {
-        const doc = await vscode2.workspace.openTextDocument(fallbackFiles[0]);
-        await vscode2.window.showTextDocument(doc, { viewColumn: vscode2.ViewColumn.One });
-        _RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
+        await this._openRecipeFile(fallbackFiles[0]);
         return;
       }
     }
     vscode2.window.showWarningMessage(
       `Recipe "${recipeName || zipName}" not found in workspace`
     );
+  }
+  async _openRecipeFile(uri) {
+    const doc = await vscode2.workspace.openTextDocument(uri);
+    await vscode2.window.showTextDocument(doc, { viewColumn: vscode2.ViewColumn.One });
+    _RecipeVisualizerPanel.createOrShow(this._extensionUri, doc);
+  }
+  /**
+   * Find a recipe file whose top-level "name" matches, for calls that reference
+   * the target only by numeric ID plus a display name.
+   */
+  async _findRecipeByName(workspaceFolder, recipeName) {
+    const pattern = new vscode2.RelativePattern(workspaceFolder, "**/*.recipe.json");
+    const files = await vscode2.workspace.findFiles(pattern, "**/node_modules/**");
+    for (const file of files) {
+      if (file.toString() === this._document.uri.toString())
+        continue;
+      try {
+        const bytes = await vscode2.workspace.fs.readFile(file);
+        const recipe = JSON.parse(Buffer.from(bytes).toString("utf-8"));
+        if (recipe?.name === recipeName)
+          return file;
+      } catch {
+      }
+    }
+    return void 0;
   }
   _updateGraph() {
     try {
